@@ -10,7 +10,7 @@ from ce3x_mcp.services.cex_codec import guardar_fichero_cex_basico, leer_fichero
 from ce3x_mcp.services.equipment_parser import analizar_datos_equipo_climatizacion
 from ce3x_mcp.services.improvement_engine import calcular_paquetes_medidas_mejora
 from ce3x_mcp.services.pvgis_client import calcular_produccion_solar_pvgis
-from ce3x_mcp.services.smart_folder_auditor import auditar_carpeta_inmueble, certificar_inmueble_desde_carpeta
+from ce3x_mcp.services.smart_folder_auditor import auditar_carpeta_inmueble, certificar_inmueble_desde_carpeta, organizar_carpeta_visita
 from ce3x_mcp.services.libraries import inferir_solucion_envolvente_por_ano, CATALOGO_VIDRIOS
 from ce3x_mcp.services.nextgen_report import generar_informe_justificativo_nextgen
 from ce3x_mcp.services.plan_parser import analizar_plano_distribucion_pdf
@@ -104,33 +104,53 @@ def test_libraries():
 def test_smart_folder_auditor():
     import tempfile
     with tempfile.TemporaryDirectory() as tmp_dir:
-        nota_path = os.path.join(tmp_dir, "apuntes_visita.txt")
-        with open(nota_path, "w", encoding="utf-8") as fp:
+        # 1. Crear archivos sueltos desordenados en raíz
+        with open(os.path.join(tmp_dir, "apuntes_visita.txt"), "w", encoding="utf-8") as fp:
             fp.write(
                 "Visita al inmueble:\n"
                 "Referencia Catastral: 2344201XK3724S0001LD\n"
-                "Agua caliente mediante termo electrico de 80 litros.\n"
+                "Agua caliente sanitaria mediante termo electrico de 80 litros.\n"
                 "Carpinteria de aluminio blanco sin persianas en salon.\n"
             )
-        
+        with open(os.path.join(tmp_dir, "plano_distribucion_vivienda.pdf"), "w", encoding="utf-8") as fp:
+            fp.write("%PDF-1.4 simulacion plano")
+        with open(os.path.join(tmp_dir, "foto_fachada_principal.jpg"), "w", encoding="utf-8") as fp:
+            fp.write("simulacion imagen fachada")
+        with open(os.path.join(tmp_dir, "placa_caldera_gas_natural_condensacion.jpg"), "w", encoding="utf-8") as fp:
+            fp.write("simulacion placa caldera")
+
+        # 2. Test organizar_carpeta_visita
+        org_res = organizar_carpeta_visita(tmp_dir)
+        assert org_res["estado"] == "organizado_exitoso"
+        assert org_res["total_archivos_movidos"] == 4
+        assert os.path.exists(os.path.join(tmp_dir, "INFORMACION", "apuntes_visita.txt"))
+        assert os.path.exists(os.path.join(tmp_dir, "PLANOS", "plano_distribucion_vivienda.pdf"))
+        assert os.path.exists(os.path.join(tmp_dir, "FOTOS", "foto_fachada_principal.jpg"))
+        assert os.path.exists(os.path.join(tmp_dir, "INSTALACIONES", "placa_caldera_gas_natural_condensacion.jpg"))
+        assert os.path.exists(os.path.join(tmp_dir, "CERTIFICADO"))
+        assert os.path.exists(os.path.join(tmp_dir, "LEEME_ESTRUCTURA_VISITA.txt"))
+
+        # 3. Test auditar_carpeta_inmueble tras organizar
         res = auditar_carpeta_inmueble(tmp_dir)
         assert res["estado"] == "auditado"
+        assert res["carpeta_organizada"] is True
         assert res["referencia_catastral_encontrada"] == "2344201XK3724S0001LD"
-        assert res["datos_listos_para_ce3x"]["tipo_acs"] == "EfectoJoule"
-        assert len(res["preguntas_quirurgicas_al_tecnico"]) >= 2
+        assert res["climatizacion_detectada"]["calefaccion"] == "CalderaCondensacion"
+        assert len(res["preguntas_quirurgicas_al_tecnico"]) >= 1
         assert res["directorio_entrega_certificado"] == os.path.join(tmp_dir, "CERTIFICADO")
-        
-        # Test generacion automatica en subcarpeta CERTIFICADO/
+
+        # 4. Test generacion automatica en subcarpeta CERTIFICADO/
         cert_res = certificar_inmueble_desde_carpeta(tmp_dir)
         assert cert_res["estado"] == "completado_exitoso"
         cert_dir = os.path.join(tmp_dir, "CERTIFICADO")
         assert os.path.exists(cert_dir)
         assert os.path.exists(os.path.join(cert_dir, "Proyecto_CE3X.cex"))
         assert os.path.exists(os.path.join(cert_dir, "Certificado_Oficial_Registro.xml"))
+        assert os.path.exists(os.path.join(cert_dir, "Informe_Certificacion_Energetica.pdf"))
         assert os.path.exists(os.path.join(cert_dir, "Informe_Medidas_Mejora_NextGen.md"))
         assert os.path.exists(os.path.join(cert_dir, "Informe_Medidas_Mejora_NextGen.pdf"))
         assert os.path.exists(os.path.join(cert_dir, "RESUMEN_ENTREGA.txt"))
-        print("[PASS] test_smart_folder_auditor y certificar_desde_carpeta en CERTIFICADO/")
+        print("[PASS] test_smart_folder_auditor, organizar_carpeta_visita y entregables en CERTIFICADO/")
 
 
 if __name__ == "__main__":

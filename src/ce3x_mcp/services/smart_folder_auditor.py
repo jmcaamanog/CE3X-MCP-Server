@@ -1,8 +1,8 @@
 """
-Módulo de Auditoría Inteligente y Certificación desde Carpeta de Visita para CE3X
-Analiza de forma autónoma una carpeta de archivos de toma de datos (croquis, planos PDF,
-notas de texto, fichas de equipos, modelos BIM) y genera automáticamente todos los entregables
-oficiales dentro de la subcarpeta CERTIFICADO/.
+Módulo de Auditoría Inteligente, Organización y Certificación desde Carpeta de Visita para CE3X
+Implementa la arquitectura estándar de 5 carpetas (INFORMACION, PLANOS, FOTOS, INSTALACIONES, CERTIFICADO),
+clasificación autónoma de documentos desordenados, extracción técnica multiformato y generación
+completa de entregables oficiales.
 """
 
 import os
@@ -35,25 +35,159 @@ from ce3x_mcp.core.models import (
 REGEX_RC_20 = re.compile(r"\b([0-9]{7}[A-Z]{2}[0-9]{4}[A-Z]{1}[0-9]{4}[A-Z]{2})\b")
 REGEX_CP = re.compile(r"\b(0[1-9]|[1-4][0-9]|5[0-2])[0-9]{3}\b")
 
+# Palabras clave para la clasificación automática
+PALABRAS_CLAVE_INSTALACIONES = [
+    "caldera", "termo", "aerotermia", "bomba", "clima", "instalacion", "calefaccion",
+    "acs", "radiador", "split", "daikin", "vaillant", "junkers", "saunier", "baxi",
+    "mitsubishi", "panasonic", "placa", "contador", "acumulador", "deposito",
+    "inversor", "solar", "fotovoltaica", "ficha_tecnica", "equipo", "maquina", "fleck"
+]
+PALABRAS_CLAVE_PLANOS = [
+    "plano", "distribucion", "croquis", "planta", "alzado", "seccion", "arquitectura",
+    "acotado", "mediciones", "superficies"
+]
+PALABRAS_CLAVE_INFORMACION = [
+    "nota", "visita", "catastro", "datos", "escritura", "recibo", "ibi", "encargo",
+    "cliente", "apuntes"
+]
+
+CANONICAL_SUBFOLDERS = ["INFORMACION", "PLANOS", "FOTOS", "INSTALACIONES", "CERTIFICADO"]
+
+def clasificar_archivo_visita(nombre_archivo: str) -> str:
+    """Determina a qué subcarpeta estándar corresponde un archivo."""
+    nombre_low = nombre_archivo.lower()
+    ext = os.path.splitext(nombre_low)[1]
+
+    # 1. Certificados y entregables previos
+    if ext == ".cex" or "certificado" in nombre_low or "informe_certificacion" in nombre_low:
+        return "CERTIFICADO"
+
+    # 2. Instalaciones y climatización (fotos de placas, fichas técnicas, etc.)
+    if any(p in nombre_low for p in PALABRAS_CLAVE_INSTALACIONES):
+        return "INSTALACIONES"
+
+    # 3. Modelos BIM y Planos arquitectónicos
+    if ext in [".ifc", ".dwg", ".dxf", ".rvt"]:
+        return "PLANOS"
+    if ext == ".pdf":
+        if any(p in nombre_low for p in PALABRAS_CLAVE_PLANOS):
+            return "PLANOS"
+        if any(p in nombre_low for p in PALABRAS_CLAVE_INFORMACION):
+            return "INFORMACION"
+        return "PLANOS"
+
+    # 4. Textos y notas de información
+    if ext in [".txt", ".md", ".json", ".csv", ".doc", ".docx", ".odt", ".rtf"]:
+        return "INFORMACION"
+
+    # 5. Fotos generales (fachadas, huecos, ventanas, sombras, interiores)
+    if ext in [".jpg", ".jpeg", ".png", ".webp", ".bmp", ".heic", ".tiff"]:
+        return "FOTOS"
+
+    return "INFORMACION"
+
+def mover_archivo_seguro(src: str, dst_dir: str) -> str:
+    """Mueve un archivo evitando sobrescribir ficheros existentes."""
+    nombre = os.path.basename(src)
+    base, ext = os.path.splitext(nombre)
+    dest = os.path.join(dst_dir, nombre)
+    contador = 1
+    while os.path.exists(dest) and os.path.abspath(src) != os.path.abspath(dest):
+        dest = os.path.join(dst_dir, f"{base}_{contador}{ext}")
+        contador += 1
+    if os.path.abspath(src) != os.path.abspath(dest):
+        shutil.move(src, dest)
+    return dest
+
+def organizar_carpeta_visita(ruta_carpeta: str) -> Dict[str, Any]:
+    """
+    Crea la estructura estándar de 5 carpetas y clasifica automáticamente los archivos:
+    - INFORMACION/   -> Notas de visita, Referencia Catastral, apuntes y datos.
+    - PLANOS/        -> Planos de distribución (PDF), croquis acotados, modelos BIM (IFC/DWG).
+    - FOTOS/         -> Fotografías del inmueble (fachada exterior, huecos y carpinterías).
+    - INSTALACIONES/ -> Fotos de placas de calderas, termos, bombas de calor y fichas técnicas.
+    - CERTIFICADO/   -> Carpeta oficial de salida para .cex, .xml, .pdf y mejoras NextGen.
+
+    Si la carpeta del inmueble contiene archivos sueltos en su raíz o en carpetas no estándar,
+    los mueve de forma segura a su subcarpeta correspondiente y crea la ficha 'LEEME_ESTRUCTURA_VISITA.txt'.
+    """
+    if not os.path.exists(ruta_carpeta) or not os.path.isdir(ruta_carpeta):
+        raise FileNotFoundError(f"La ruta de carpeta especificada no existe: {ruta_carpeta}")
+
+    carpetas = {sub: os.path.join(ruta_carpeta, sub) for sub in CANONICAL_SUBFOLDERS}
+    for p in carpetas.values():
+        os.makedirs(p, exist_ok=True)
+
+    movidos = []
+
+    # Escanear archivos sueltos en la raíz y subdirectorios no canónicos
+    for root, dirs, files in os.walk(ruta_carpeta):
+        rel_root = os.path.relpath(root, ruta_carpeta)
+        partes = rel_root.split(os.sep) if rel_root != "." else []
+
+        # Si ya está dentro de una subcarpeta canónica, respetarlo
+        if partes and partes[0].upper() in CANONICAL_SUBFOLDERS:
+            continue
+
+        for f in files:
+            if f in ["LEEME_ESTRUCTURA_VISITA.txt", "RESUMEN_ENTREGA.txt"]:
+                continue
+            src_file = os.path.join(root, f)
+            sub_destino = clasificar_archivo_visita(f)
+            dst_dir = carpetas[sub_destino]
+
+            dest_final = mover_archivo_seguro(src_file, dst_dir)
+            movidos.append({
+                "archivo": f,
+                "origen": os.path.relpath(src_file, ruta_carpeta),
+                "subcarpeta_destino": sub_destino,
+                "ruta_destino": os.path.relpath(dest_final, ruta_carpeta)
+            })
+
+    # Generar ficha LEEME explicativa para el técnico
+    leeme_path = os.path.join(ruta_carpeta, "LEEME_ESTRUCTURA_VISITA.txt")
+    with open(leeme_path, "w", encoding="utf-8") as fp:
+        fp.write(
+            "================================================================================\n"
+            "ESTRUCTURA ESTANDAR DE CARPETA DE VISITA Y CERTIFICACION ENERGETICA\n"
+            "================================================================================\n"
+            "Esta carpeta ha sido organizada conforme al estandar profesional:\n\n"
+            "📁 1. INFORMACION/   -> Notas de visita, Referencia Catastral, apuntes, datos del cliente.\n"
+            "📁 2. PLANOS/        -> Planos de distribucion en PDF, croquis acotados, modelos BIM (IFC/DWG).\n"
+            "📁 3. FOTOS/         -> Fotografias del inmueble (fachada exterior, huecos y carpinterias, vistas).\n"
+            "📁 4. INSTALACIONES/ -> Fotos de placas de calderas, termos, bombas de calor y fichas tecnicas.\n"
+            "📁 5. CERTIFICADO/   -> Entregables oficiales finales (.cex, .xml, .pdf y mejoras NextGen).\n"
+            "================================================================================\n"
+        )
+
+    inventario = {sub: os.listdir(carpetas[sub]) for sub in CANONICAL_SUBFOLDERS}
+
+    return {
+        "estado": "organizado_exitoso",
+        "mensaje": f"Carpeta estructurada con éxito en las 5 subcarpetas estándar. Se han clasificado {len(movidos)} archivos.",
+        "directorio_raiz": ruta_carpeta,
+        "subcarpetas": carpetas,
+        "total_archivos_movidos": len(movidos),
+        "detalle_movimientos": movidos,
+        "inventario_actual": inventario
+    }
+
 def compilar_informe_mejoras_pdf(
     texto_md: str,
     ruta_pdf: str,
     titulo: str = "DICTAMEN OFICIAL DE MEDIDAS DE MEJORA Y SUBVENCIONES NEXTGEN"
 ) -> bool:
-    """
-    Compila el dictamen técnico de medidas de mejora y ayudas NextGen (RD 853/2021 y RD 390/2021)
-    a un archivo PDF maquetado profesionalmente dentro de la carpeta CERTIFICADO/.
-    """
+    """Compila el informe técnico de mejoras a PDF maquetado profesionalmente."""
     try:
         doc = fitz.open()
         lines = texto_md.split("\n")
         page = doc.new_page(width=595, height=842) # A4 estándar
         
-        # Franja decorativa de cabecera
+        # Franja decorativa
         rect_decor = fitz.Rect(0, 0, 595, 14)
         page.draw_rect(rect_decor, color=(0.08, 0.38, 0.74), fill=(0.08, 0.38, 0.74))
         
-        # Tarjeta encabezado
+        # Encabezado
         rect_header = fitz.Rect(45, 35, 550, 75)
         page.draw_rect(rect_header, color=(0.85, 0.90, 0.95), fill=(0.95, 0.97, 1.0), width=1.0)
         page.insert_textbox(rect_header, f"\n   {titulo}", fontsize=11, fontname="helv", color=(0.08, 0.38, 0.74))
@@ -120,7 +254,8 @@ def compilar_informe_mejoras_pdf(
 
 def auditar_carpeta_inmueble(ruta_carpeta: str) -> Dict[str, Any]:
     """
-    Escanea exhaustivamente la carpeta del inmueble, clasifica los archivos disponibles,
+    Escanea exhaustivamente la carpeta del inmueble, clasifica los archivos disponibles en
+    las 5 categorías estándar (INFORMACION, PLANOS, FOTOS, INSTALACIONES, CERTIFICADO),
     extrae datos catastrales, arquitectónicos e instalaciones, y define la subcarpeta CERTIFICADO/
     donde se guardará el conjunto de entregables oficiales.
     """
@@ -129,53 +264,64 @@ def auditar_carpeta_inmueble(ruta_carpeta: str) -> Dict[str, Any]:
 
     directorio_certificado = os.path.join(ruta_carpeta, "CERTIFICADO")
 
-    # 1. Inventario y clasificacion de archivos (ignorando la carpeta CERTIFICADO interna si existe)
-    archivos_encontrados = {
-        "textos_y_notas": [],
-        "planos_pdf": [],
-        "imagenes": [],
-        "modelos_bim": []
+    # 1. Inventario y clasificación exhaustiva
+    archivos_por_categoria = {
+        "informacion": [],
+        "planos": [],
+        "fotos": [],
+        "instalaciones": [],
+        "certificado": []
     }
+    archivos_sueltos_en_raiz = []
 
-    for root, _, files in os.walk(ruta_carpeta):
-        if "CERTIFICADO" in root:
+    for root, dirs, files in os.walk(ruta_carpeta):
+        rel_root = os.path.relpath(root, ruta_carpeta)
+        partes = rel_root.split(os.sep) if rel_root != "." else []
+
+        # Ignorar la carpeta CERTIFICADO de salida al auditar la toma de datos
+        if partes and partes[0].upper() == "CERTIFICADO":
+            for f in files:
+                archivos_por_categoria["certificado"].append(os.path.join(rel_root, f))
             continue
+
         for f in files:
-            ext = os.path.splitext(f)[1].lower()
+            if f in ["LEEME_ESTRUCTURA_VISITA.txt", "RESUMEN_ENTREGA.txt"]:
+                continue
             ruta_f = os.path.join(root, f)
             rel_f = os.path.relpath(ruta_f, ruta_carpeta)
-            
-            if ext in [".txt", ".md", ".json", ".csv"]:
-                archivos_encontrados["textos_y_notas"].append(rel_f)
-            elif ext == ".pdf":
-                archivos_encontrados["planos_pdf"].append(rel_f)
-            elif ext in [".jpg", ".jpeg", ".png", ".webp", ".bmp"]:
-                archivos_encontrados["imagenes"].append(rel_f)
-            elif ext == ".ifc":
-                archivos_encontrados["modelos_bim"].append(rel_f)
 
-    # 2. Extraccion textual de notas
+            if rel_root == ".":
+                archivos_sueltos_en_raiz.append(f)
+
+            cat = clasificar_archivo_visita(f)
+            archivos_por_categoria[cat.lower()].append(rel_f)
+
+    carpeta_organizada = len(archivos_sueltos_en_raiz) == 0
+
+    # 2. Extracción textual de notas y referencias catastrales
     texto_acumulado = ""
     rc_detectada = None
     cp_detectado = None
 
-    for rel_txt in archivos_encontrados["textos_y_notas"]:
-        try:
-            with open(os.path.join(ruta_carpeta, rel_txt), "r", encoding="utf-8", errors="ignore") as fp:
-                t = fp.read()
-                texto_acumulado += "\n" + t
-                if not rc_detectada:
-                    m_rc = REGEX_RC_20.search(t)
-                    if m_rc:
-                        rc_detectada = m_rc.group(1)
-                if not cp_detectado:
-                    m_cp = REGEX_CP.search(t)
-                    if m_cp:
-                        cp_detectado = m_cp.group(1)
-        except Exception:
-            pass
+    for rel_doc in archivos_por_categoria["informacion"]:
+        ext = os.path.splitext(rel_doc)[1].lower()
+        if ext in [".txt", ".md", ".json", ".csv"]:
+            try:
+                with open(os.path.join(ruta_carpeta, rel_doc), "r", encoding="utf-8", errors="ignore") as fp:
+                    t = fp.read()
+                    texto_acumulado += "\n" + t
+                    if not rc_detectada:
+                        m_rc = REGEX_RC_20.search(t)
+                        if m_rc:
+                            rc_detectada = m_rc.group(1)
+                    if not cp_detectado:
+                        m_cp = REGEX_CP.search(t)
+                        if m_cp:
+                            cp_detectado = m_cp.group(1)
+            except Exception:
+                pass
 
-    # 3. Consulta Catastral Automatica si se hallo RC
+    # 3. Consulta Catastral Automática si se halló RC
     datos_catastro = {}
     ano_construccion = 1982
     superficie_catastro = 100.0
@@ -196,21 +342,36 @@ def auditar_carpeta_inmueble(ruta_carpeta: str) -> Dict[str, Any]:
         except Exception:
             pass
 
-    # 4. Analisis de planos PDF si existen
+    # 4. Análisis de planos (PDF o BIM IFC) si existen
     datos_planos = {}
-    if archivos_encontrados["planos_pdf"]:
-        primer_plano = os.path.join(ruta_carpeta, archivos_encontrados["planos_pdf"][0])
+    planos_pdf = [p for p in archivos_por_categoria["planos"] if p.lower().endswith(".pdf")]
+    if planos_pdf:
+        primer_plano = os.path.join(ruta_carpeta, planos_pdf[0])
         try:
             datos_planos = analizar_plano_distribucion_pdf(primer_plano)
         except Exception:
             pass
 
-    # 5. Deteccion de instalaciones en notas y textos
+    # 5. Detección de instalaciones en archivos de INSTALACIONES y notas
     clima_inferido = {
         "calefaccion": "Desconocido",
         "acs": "Desconocido",
         "refrigeracion": "Sin sistema"
     }
+    
+    # 5.1. Detección por nombres de archivo en INSTALACIONES (fotos de placas, fichas)
+    for inst_rel in archivos_por_categoria["instalaciones"]:
+        base_inst = os.path.splitext(os.path.basename(inst_rel))[0].replace("_", " ")
+        parsed = analizar_datos_equipo_climatizacion(base_inst)
+        if parsed.get("valido"):
+            tec = parsed.get("tecnologia_detectada")
+            srv = parsed.get("servicio_detectado")
+            if srv in ["Calefaccion", "Mixto2", "Mixto3"]:
+                clima_inferido["calefaccion"] = tec
+            if srv in ["ACS", "Mixto2", "Mixto3"]:
+                clima_inferido["acs"] = tec
+
+    # 5.2. Detección por texto acumulado en notas de INFORMACION
     if texto_acumulado:
         t_low = texto_acumulado.lower()
         if "aerotermia" in t_low or "bomba de calor" in t_low:
@@ -223,22 +384,24 @@ def auditar_carpeta_inmueble(ruta_carpeta: str) -> Dict[str, Any]:
             clima_inferido["calefaccion"] = "CalderaEstandar"
             clima_inferido["acs"] = "CalderaEstandar"
         elif "termo" in t_low or "electrico" in t_low or "calefactor" in t_low or "acumulador" in t_low:
-            clima_inferido["calefaccion"] = "EfectoJoule"
-            clima_inferido["acs"] = "EfectoJoule"
+            if clima_inferido["acs"] == "Desconocido":
+                clima_inferido["acs"] = "EfectoJoule"
+            if clima_inferido["calefaccion"] == "Desconocido":
+                clima_inferido["calefaccion"] = "EfectoJoule"
 
-    # 6. Solucion de envolvente recomendada segun antiguedad
+    # 6. Solución de envolvente recomendada según antigüedad
     arquetipo_envolvente = inferir_solucion_envolvente_por_ano(ano_construccion, provincia)
     zona_climatica = obtener_zona_climatica(provincia, municipio)
     superficie_final = datos_planos.get("superficie_util_total_estimada_m2") or superficie_catastro
 
-    # 7. Generacion de Preguntas Quirurgicas para el Tecnico
+    # 7. Generación de Preguntas Quirúrgicas para el Técnico
     preguntas_para_el_tecnico = []
-    
+
     if not rc_detectada:
         preguntas_para_el_tecnico.append(
-            "No se ha encontrado Referencia Catastral en las notas. ¿Podrías confirmarla o indicar dirección completa exacta y año de construcción aproximado?"
+            "No se ha encontrado Referencia Catastral en INFORMACION/. ¿Podrías confirmarla o indicar dirección completa exacta y año aproximado de construcción?"
         )
-    if not archivos_encontrados["planos_pdf"] and not datos_planos:
+    if not planos_pdf and not datos_planos:
         preguntas_para_el_tecnico.append(
             f"Superficie adoptada de Catastro: {superficie_catastro} m2 construidos (aprox. {round(superficie_catastro*0.85, 1)} m2 útiles). ¿Es correcta o se ajusta a otra cifra?"
         )
@@ -272,22 +435,33 @@ def auditar_carpeta_inmueble(ruta_carpeta: str) -> Dict[str, Any]:
         "directorio_salida": directorio_certificado
     }
 
+    sugerencia_organizacion = None
+    if not carpeta_organizada:
+        sugerencia_organizacion = (
+            f"La carpeta contiene {len(archivos_sueltos_en_raiz)} archivo(s) suelto(s) en su raíz. "
+            f"Se recomienda ejecutar 'organizar_carpeta_visita' para agruparlos en INFORMACION/, PLANOS/, FOTOS/, INSTALACIONES/ y CERTIFICADO/."
+        )
+
     return {
         "estado": "auditado",
         "directorio_carpeta_inmueble": ruta_carpeta,
         "directorio_entrega_certificado": directorio_certificado,
-        "archivos_detectados": archivos_encontrados,
+        "carpeta_organizada": carpeta_organizada,
+        "archivos_sueltos_en_raiz": archivos_sueltos_en_raiz,
+        "sugerencia_organizacion": sugerencia_organizacion,
+        "archivos_detectados_por_categoria": archivos_por_categoria,
         "referencia_catastral_encontrada": rc_detectada,
         "datos_catastro_ovs": datos_catastro,
         "datos_planos_extraidos": datos_planos,
+        "climatizacion_detectada": clima_inferido,
         "arquetipo_constructivo_propuesto": arquetipo_envolvente,
         "datos_listos_para_ce3x": datos_listos,
         "preguntas_quirurgicas_al_tecnico": preguntas_para_el_tecnico,
         "instruccion_para_la_ia": (
-            f"Presenta al usuario un resumen sintético de lo detectado. "
-            f"Hazle EXCLUSIVAMENTE las preguntas quirúrgicas listadas si falta información, "
-            f"o llama directamente a 'certificar_desde_carpeta' para generar el paquete oficial "
-            f"automáticamente dentro de la subcarpeta: {directorio_certificado}"
+            f"1. Si 'carpeta_organizada' es False, ejecuta primero 'organizar_carpeta_visita' para ordenar los archivos.\n"
+            f"2. Presenta al usuario un resumen sintético de lo detectado.\n"
+            f"3. Hazle EXCLUSIVAMENTE las preguntas quirúrgicas listadas si falta información.\n"
+            f"4. Llama a 'certificar_desde_carpeta' para generar el paquete oficial dentro de: {directorio_certificado}"
         )
     }
 
@@ -309,11 +483,11 @@ def certificar_inmueble_desde_carpeta(
     """
     auditoria = auditar_carpeta_inmueble(ruta_carpeta)
     d = auditoria["datos_listos_para_ce3x"]
-    
+
     out_dir = auditoria["directorio_entrega_certificado"]
     os.makedirs(out_dir, exist_ok=True)
 
-    # Consolidar parametros
+    # Consolidar parámetros
     nombre_final = nombre_edificio or d["nombre_edificio"]
     direccion = d["direccion"]
     municipio = d["municipio"]
@@ -326,7 +500,7 @@ def certificar_inmueble_desde_carpeta(
     calef = tipo_calefaccion or d["tipo_calefaccion"]
     acs = tipo_acs or d["tipo_acs"]
 
-    # 1. Calculo de calificacion simplificada
+    # 1. Cálculo de calificación simplificada
     calc = calcular_calificacion_energetica_simplificada(
         superficie_util=sup,
         ano_construccion=ano,
@@ -401,7 +575,7 @@ def certificar_inmueble_desde_carpeta(
         calificacion_inicial=res_cal,
         medida_seleccionada=medida_destacada
     )
-    
+
     informe_mejoras_md = os.path.join(out_dir, "Informe_Medidas_Mejora_NextGen.md")
     with open(informe_mejoras_md, "w", encoding="utf-8") as fp:
         fp.write(dictamen["dictamen_markdown"])

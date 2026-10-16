@@ -51,7 +51,7 @@ from ce3x_mcp.services.improvement_engine import calcular_paquetes_medidas_mejor
 from ce3x_mcp.services.pvgis_client import calcular_produccion_solar_pvgis
 from ce3x_mcp.services.nextgen_report import generar_informe_justificativo_nextgen
 from ce3x_mcp.services.plan_parser import analizar_plano_distribucion_pdf
-from ce3x_mcp.services.smart_folder_auditor import auditar_carpeta_inmueble, certificar_inmueble_desde_carpeta
+from ce3x_mcp.services.smart_folder_auditor import auditar_carpeta_inmueble, certificar_inmueble_desde_carpeta, organizar_carpeta_visita as organizar_carpeta_visita_impl
 from ce3x_mcp.services.libraries import (
     CATALOGO_MUROS_FACHADA,
     CATALOGO_VIDRIOS,
@@ -62,7 +62,29 @@ from ce3x_mcp.services.libraries import (
 # Instancia oficial del servidor FastMCP
 mcp = FastMCP(
     "CE3X-MCP-Server",
-    instructions="Servidor MCP Oficial para Certificación Energética de Edificios en España (CE3X / CTE DB-HE / RD 390/2021)"
+    instructions=(
+        "Servidor MCP Oficial para Certificación Energética de Edificios en España (CE3X v3.2 / CTE DB-HE / RD 390/2021).\n\n"
+        "PROTOCOLO DE INTERACCIÓN OBLIGATORIO PARA LA IA:\n"
+        "1. PRIMER CONTACTO: Al iniciar la conversación o cuando el usuario pida certificar un inmueble, "
+        "lo PRIMERO que debes preguntarle con cortesía es:\n"
+        "   '¿En qué carpeta de tu ordenador tienes los archivos o toma de datos de la visita? "
+        "(Por favor, indícame la ruta completa, por ejemplo: C:\\MisVisitas\\Piso_RuaReal)'.\n"
+        "2. ESTRUCTURACIÓN AUTOMÁTICA:\n"
+        "   Una vez recibida la ruta, ejecuta 'organizar_carpeta_visita'. Si los archivos están sueltos o desordenados, "
+        "la herramienta los organizará automáticamente en las 5 carpetas estándar:\n"
+        "   - INFORMACION/ (apuntes, notas, datos de Catastro)\n"
+        "   - PLANOS/ (planos PDF, croquis acotados, IFC)\n"
+        "   - FOTOS/ (fotos generales de fachadas, ventanas, sombras)\n"
+        "   - INSTALACIONES/ (fotos de placas de calderas, termos, bombas de calor y fichas técnicas)\n"
+        "   - CERTIFICADO/ (entregables oficiales finales)\n"
+        "   Informa al usuario de cómo ha quedado ordenada su carpeta para que le conste en adelante.\n"
+        "3. AUDITORÍA Y PREGUNTAS QUIRÚRGICAS:\n"
+        "   Ejecuta 'auditar_carpeta_visita', analiza los datos recopilados y formula ÚNICAMENTE 1 o 2 preguntas "
+        "quirúrgicas si falta algún dato no deducible (orientación o sombras).\n"
+        "4. GENERACIÓN AUTOMÁTICA EN 'CERTIFICADO/':\n"
+        "   Ejecuta 'certificar_desde_carpeta_visita'. Todos los entregables (.cex, XML oficial v3.0, PDF de 15 págs., "
+        "informe de mejoras y dictamen NextGen en PDF/MD) quedarán generados directamente en la subcarpeta CERTIFICADO/."
+    )
 )
 
 @mcp.tool()
@@ -398,6 +420,22 @@ def generar_certificado_completo(
 
 
 @mcp.tool()
+def organizar_carpeta_visita(ruta_carpeta: str) -> Dict[str, Any]:
+    """
+    Crea la estructura estándar de 5 carpetas y clasifica automáticamente los archivos:
+    - INFORMACION/   -> Notas de visita, Referencia Catastral, apuntes y datos.
+    - PLANOS/        -> Planos de distribución en PDF, croquis acotados, modelos BIM (IFC/DWG).
+    - FOTOS/         -> Fotografías del inmueble (fachada exterior, huecos y carpinterías).
+    - INSTALACIONES/ -> Fotos de placas de calderas, termos, bombas de calor y fichas técnicas.
+    - CERTIFICADO/   -> Carpeta oficial de salida para .cex, .xml, .pdf y mejoras NextGen.
+
+    Si la carpeta del inmueble contiene archivos sueltos en su raíz o en carpetas no estándar,
+    los clasifica y mueve automáticamente a su subcarpeta correspondiente, generando además
+    la ficha 'LEEME_ESTRUCTURA_VISITA.txt'.
+    """
+    return organizar_carpeta_visita_impl(ruta_carpeta)
+
+@mcp.tool()
 def auditar_carpeta_visita(ruta_carpeta: str) -> Dict[str, Any]:
     """
     Audita de forma autónoma una carpeta de visita técnica (croquis, notas, planos PDF,
@@ -441,6 +479,20 @@ def obtener_catalogo_soluciones_constructivas() -> str:
         "marcos_carpinteria": CATALOGO_MARCOS_CARPINTERIA
     }
     return json.dumps(catalogo, indent=2, ensure_ascii=False)
+
+@mcp.prompt()
+def iniciar_asistente_visita() -> str:
+    """Prompt inicial de bienvenida para solicitar la carpeta de visita y organizar los archivos."""
+    return """Actúa como un Arquitecto Técnico experto en certificación energética con CE3X.
+Al iniciar la interacción con el usuario:
+1. Pregúntale amablemente: '¿En qué carpeta de tu ordenador tienes los archivos o toma de datos de la visita del inmueble? (Por favor, facilítame la ruta completa, por ejemplo: C:\MisVisitas\Piso_RuaReal)'.
+2. Indícale que si tiene los archivos sueltos (fotos, planos, notas), los organizarás automáticamente en las 5 carpetas estándar:
+   - INFORMACION/ (apuntes, notas, datos del cliente)
+   - PLANOS/ (planos en PDF, croquis acotados, modelos IFC/DWG)
+   - FOTOS/ (fotos generales del inmueble, fachadas y huecos)
+   - INSTALACIONES/ (fotos de placas de calderas, termos, bombas de calor y fichas técnicas)
+   - CERTIFICADO/ (entregables oficiales finales: .cex, .xml, .pdf del informe y mejoras NextGen)
+3. En cuanto el usuario te proporcione la ruta, ejecuta 'organizar_carpeta_visita' y luego 'auditar_carpeta_visita'."""
 
 @mcp.prompt()
 def asistente_auditoria_carpeta_visita(ruta_carpeta: str = "ruta/a/carpeta_inmueble") -> str:
