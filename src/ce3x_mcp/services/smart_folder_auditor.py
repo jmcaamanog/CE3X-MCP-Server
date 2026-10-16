@@ -67,7 +67,11 @@ def clasificar_archivo_visita(nombre_archivo: str) -> str:
     if any(p in nombre_low for p in PALABRAS_CLAVE_INSTALACIONES):
         return "INSTALACIONES"
 
-    # 3. Modelos BIM y Planos arquitectónicos
+    # 3. Documentos de Catastro (PDFs con RC o mención a Catastro) -> INFORMACION
+    if REGEX_RC_20.search(nombre_archivo) or any(p in nombre_low for p in ["catastro", "ovc", "sec", "referencia", "parcela", "descriptiva"]):
+        return "INFORMACION"
+
+    # 4. Modelos BIM y Planos arquitectónicos
     if ext in [".ifc", ".dwg", ".dxf", ".rvt"]:
         return "PLANOS"
     if ext == ".pdf":
@@ -299,26 +303,50 @@ def auditar_carpeta_inmueble(ruta_carpeta: str) -> Dict[str, Any]:
 
     carpeta_organizada = len(archivos_sueltos_en_raiz) == 0
 
-    # 2. Extracción textual de notas y referencias catastrales
+    # 2. Búsqueda exhaustiva de Referencia Catastral (Nombres de archivo y documentos)
     texto_acumulado = ""
     rc_detectada = None
     cp_detectado = None
 
+    # 2.1. Buscar en todos los nombres de archivo
+    for cat_list in archivos_por_categoria.values():
+        for f_rel in cat_list:
+            m_fn = REGEX_RC_20.search(os.path.basename(f_rel))
+            if m_fn:
+                rc_detectada = m_fn.group(1)
+                break
+        if rc_detectada:
+            break
+
+    # 2.2. Extraer texto de documentos en INFORMACION (TXT, MD, JSON, CSV y PDFs de Catastro)
     for rel_doc in archivos_por_categoria["informacion"]:
+        doc_path = os.path.join(ruta_carpeta, rel_doc)
         ext = os.path.splitext(rel_doc)[1].lower()
         if ext in [".txt", ".md", ".json", ".csv"]:
             try:
-                with open(os.path.join(ruta_carpeta, rel_doc), "r", encoding="utf-8", errors="ignore") as fp:
+                with open(doc_path, "r", encoding="utf-8", errors="ignore") as fp:
                     t = fp.read()
                     texto_acumulado += "\n" + t
                     if not rc_detectada:
                         m_rc = REGEX_RC_20.search(t)
-                        if m_rc:
-                            rc_detectada = m_rc.group(1)
+                        if m_rc: rc_detectada = m_rc.group(1)
                     if not cp_detectado:
                         m_cp = REGEX_CP.search(t)
-                        if m_cp:
-                            cp_detectado = m_cp.group(1)
+                        if m_cp: cp_detectado = m_cp.group(0)
+            except Exception:
+                pass
+        elif ext == ".pdf":
+            try:
+                doc_pdf = fitz.open(doc_path)
+                for page in doc_pdf:
+                    t_page = page.get_text()
+                    texto_acumulado += "\n" + t_page
+                    if not rc_detectada:
+                        m_rc = REGEX_RC_20.search(t_page)
+                        if m_rc: rc_detectada = m_rc.group(1)
+                    if not cp_detectado:
+                        m_cp = REGEX_CP.search(t_page)
+                        if m_cp: cp_detectado = m_cp.group(0)
             except Exception:
                 pass
 
@@ -343,15 +371,44 @@ def auditar_carpeta_inmueble(ruta_carpeta: str) -> Dict[str, Any]:
         except Exception:
             pass
 
-    # 4. Análisis de planos (PDF o BIM IFC) si existen
+    # 4. Análisis inteligente de planos (PDF) y modelos BIM (IFC)
     datos_planos = {}
+    datos_bim = {}
+    
+    # Buscar el mejor plano PDF (que contenga recintos detectados)
     planos_pdf = [p for p in archivos_por_categoria["planos"] if p.lower().endswith(".pdf")]
-    if planos_pdf:
-        primer_plano = os.path.join(ruta_carpeta, planos_pdf[0])
+    # También revisar PDFs en la raíz si no estuvieran clasificados aún
+    for root_f in archivos_sueltos_en_raiz:
+        if root_f.lower().endswith(".pdf") and root_f not in planos_pdf:
+            planos_pdf.append(root_f)
+
+    for p_rel in planos_pdf:
+        # Evitar analizar PDFs que son exclusivamente catastrales
+        if REGEX_RC_20.search(p_rel) or "catastro" in p_rel.lower():
+            continue
+        full_pdf = os.path.join(ruta_carpeta, p_rel)
         try:
-            datos_planos = analizar_plano_distribucion_pdf(primer_plano)
+            res_plano = analizar_plano_distribucion_pdf(full_pdf)
+            if res_plano.get("valido") and res_plano.get("num_estancias_detectadas", 0) > 0:
+                if not datos_planos or res_plano["superficie_util_total_detectada_m2"] > datos_planos.get("superficie_util_total_detectada_m2", 0):
+                    datos_planos = res_plano
+                    datos_planos["fichero_plano"] = p_rel
         except Exception:
             pass
+
+    # Analizar modelos BIM IFC si existen en PLANOS o en cualquier subcarpeta
+    from ce3x_mcp.services.bim_parser import extraer_envolvente_desde_ifc
+    for root_dir, _, files in os.walk(ruta_carpeta):
+        for f in files:
+            if f.lower().endswith(".ifc"):
+                ifc_full = os.path.join(root_dir, f)
+                try:
+                    res_bim = extraer_envolvente_desde_ifc(ifc_full)
+                    if res_bim.get("valido"):
+                        rel_ifc = os.path.relpath(ifc_full, ruta_carpeta)
+                        datos_bim[rel_ifc] = res_bim
+                except Exception:
+                    pass
 
     # 5. Detección de instalaciones en archivos de INSTALACIONES y notas
     clima_inferido = {
@@ -419,21 +476,45 @@ def auditar_carpeta_inmueble(ruta_carpeta: str) -> Dict[str, Any]:
         "¿Hacia qué orientación da la fachada principal (Norte, Sur, Este, Oeste)? ¿Existen sombras acusadas por edificios colindantes o patio de luces estrecho?"
     )
 
-    # 8. Matriz Ejecutiva de Datos Listos para Certificar
+    # 8. Determinación rigurosa de superficie útil contrastada
+    origen_superficie = "Catastro construida ponderada (85%)"
+    if datos_planos and datos_planos.get("superficie_util_total_detectada_m2", 0) > 0:
+        superficie_util_contrastada = datos_planos["superficie_util_total_detectada_m2"]
+        origen_superficie = f"Plano arquitectónico medido ({datos_planos.get('fichero_plano', 'PDF')}): {len(datos_planos.get('estancias', []))} estancias"
+    elif datos_catastro.get("unidades_constructivas"):
+        # Buscar unidad de VIVIENDA
+        vivienda_ucs = [u for u in datos_catastro["unidades_constructivas"] if "vivienda" in u.get("uso", "").lower()]
+        if vivienda_ucs:
+            superficie_util_contrastada = round(vivienda_ucs[0]["superficie_m2"] * 0.85, 2)
+            origen_superficie = f"Catastro unidad constructiva Vivienda ({vivienda_ucs[0]['superficie_m2']} m2 x 0.85)"
+        else:
+            superficie_util_contrastada = round(superficie_catastro * 0.85, 2)
+    else:
+        superficie_util_contrastada = round(superficie_catastro * 0.85, 2)
+
+    # 9. Matriz Ejecutiva de Datos Listos para Certificar con Origen Contrastado
     datos_listos = {
         "nombre_edificio": f"Vivienda {municipio} ({ano_construccion})",
-        "direccion": datos_catastro.get("direccion_completa", "Dirección pendiente"),
+        "direccion": datos_catastro.get("direccion", "Dirección pendiente"),
         "municipio": municipio,
         "provincia": provincia,
-        "codigo_postal": cp_detectado or datos_catastro.get("codigo_postal", "15001"),
+        "codigo_postal": datos_catastro.get("codigo_postal") or cp_detectado or "15001",
         "ano_construccion": ano_construccion,
-        "superficie_util": round(superficie_final * 0.85, 2),
+        "superficie_util": superficie_util_contrastada,
         "zona_climatica": zona_climatica,
         "referencia_catastral": rc_detectada or "00000000000000000000",
-        "tipo_calefaccion": clima_inferido["calefaccion"] if clima_inferido["calefaccion"] != "Desconocido" else "EfectoJoule",
-        "tipo_acs": clima_inferido["acs"] if clima_inferido["acs"] != "Desconocido" else "EfectoJoule",
+        "tipo_calefaccion": clima_inferido["calefaccion"] if clima_inferido["calefaccion"] != "Desconocido" else "Pendiente_Confirmacion",
+        "tipo_acs": clima_inferido["acs"] if clima_inferido["acs"] != "Desconocido" else "Pendiente_Confirmacion",
+        "instalaciones_confirmadas": clima_inferido["calefaccion"] != "Desconocido" and clima_inferido["acs"] != "Desconocido",
         "solucion_constructiva_estimada": arquetipo_envolvente,
-        "directorio_salida": directorio_certificado
+        "directorio_salida": directorio_certificado,
+        "trazabilidad_origen_datos": {
+            "referencia_catastral": f"{rc_detectada} (Localizada en documentos de la visita)" if rc_detectada else "No identificada",
+            "direccion_oficial": datos_catastro.get("direccion", "Pendiente de Catastro"),
+            "ano_edificacion": f"{ano_construccion} (Catastro OVC)" if datos_catastro.get("ano_construccion") else f"{ano_construccion} (Estimado)",
+            "superficie_util": f"{superficie_util_contrastada} m2 ({origen_superficie})",
+            "zona_climatica": f"{zona_climatica} (CTE DB-HE Apéndice B para {municipio}, {provincia})"
+        }
     }
 
     sugerencia_organizacion = None
@@ -454,6 +535,7 @@ def auditar_carpeta_inmueble(ruta_carpeta: str) -> Dict[str, Any]:
         "referencia_catastral_encontrada": rc_detectada,
         "datos_catastro_ovs": datos_catastro,
         "datos_planos_extraidos": datos_planos,
+        "modelos_bim_extraidos": datos_bim,
         "climatizacion_detectada": clima_inferido,
         "arquetipo_constructivo_propuesto": arquetipo_envolvente,
         "datos_listos_para_ce3x": datos_listos,

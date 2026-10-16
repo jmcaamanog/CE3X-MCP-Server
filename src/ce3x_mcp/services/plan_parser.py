@@ -2,11 +2,19 @@ import pymupdf
 import re
 from typing import Dict, Any, List, Optional
 
+PALABRAS_ESTANCIA = [
+    "salón", "salon", "estar", "comedor", "dormitorio", "habitación", "habitacion",
+    "cocina", "baño", "bano", "aseo", "pasillo", "distribuidor", "vestíbulo",
+    "vestibulo", "terraza", "tendedero", "recibidor", "despacho", "vestidor",
+    "galería", "galeria", "lavadero", "trastero", "despensa", "estudio", "ropero",
+    "hall", "buhardilla", "balcón", "balcon"
+]
+
 def analizar_plano_distribucion_pdf(pdf_path: str) -> Dict[str, Any]:
     """
     Abre y analiza un plano de distribución arquitectónico en PDF mediante PyMuPDF.
     Extrae:
-    - Textos de estancias (ej. Salón, Dormitorio, Cocina, Baño) y sus superficies en m².
+    - Textos de estancias (ej. Salón, Dormitorio, Cocina, Baño, Vestidor, Galería) y sus superficies en m².
     - Cuadros de carpinterías y dimensiones de ventanas (ej. 120x120, 150x210).
     - Sumatorio de superficie útil estimada.
     """
@@ -22,33 +30,45 @@ def analizar_plano_distribucion_pdf(pdf_path: str) -> Dict[str, Any]:
     # Expresiones regulares para cazar recintos y superficies
     regex_superficie = re.compile(r'(\d+[.,]\d+)\s*(?:m2|m²|mts2)', re.IGNORECASE)
     regex_ventana = re.compile(r'(?:V|H|P)\s*[-_]?\s*(\d+)\s*[:xX/]\s*(\d+)', re.IGNORECASE)
-    
-    palabras_estancia = ["salón", "salon", "estar", "comedor", "dormitorio", "habitación", "habitacion", 
-                         "cocina", "baño", "bano", "aseo", "pasillo", "distribuidor", "vestíbulo", 
-                         "vestibulo", "terraza", "tendedero", "recibidor", "despacho"]
 
     for page_idx in range(len(doc)):
         page = doc[page_idx]
-        blocks = page.get_text("blocks") # (x0, y0, x1, y1, text, block_no, block_type)
+        blocks = page.get_text("blocks")  # (x0, y0, x1, y1, text, block_no, block_type)
         
         for b in blocks:
             text = b[4].strip()
             textos_completos.append(text)
             lineas = [l.strip() for l in text.split('\n') if l.strip()]
             
-            # Buscar menciones a estancias
-            for linea in lineas:
+            # 1. Buscar estancias y superficies en el mismo bloque o líneas adyacentes
+            for i, linea in enumerate(lineas):
                 linea_lower = linea.lower()
-                for palabra in palabras_estancia:
+                for palabra in PALABRAS_ESTANCIA:
                     if palabra in linea_lower:
-                        # Buscar si en este bloque hay una superficie
-                        match_sup = regex_superficie.search(text)
+                        # Buscar superficie en la misma línea o en la línea inmediatamente siguiente
                         area = 0.0
+                        match_sup = regex_superficie.search(linea)
                         if match_sup:
                             try:
                                 area = float(match_sup.group(1).replace(',', '.'))
                             except ValueError:
                                 pass
+                        elif i + 1 < len(lineas):
+                            match_next = regex_superficie.search(lineas[i + 1])
+                            if match_next:
+                                try:
+                                    area = float(match_next.group(1).replace(',', '.'))
+                                except ValueError:
+                                    pass
+                        if area <= 0:
+                            # Buscar en el texto global del bloque
+                            match_block = regex_superficie.search(text)
+                            if match_block:
+                                try:
+                                    area = float(match_block.group(1).replace(',', '.'))
+                                except ValueError:
+                                    pass
+
                         estancias_detectadas.append({
                             "nombre": linea,
                             "superficie_m2": area,
@@ -56,7 +76,7 @@ def analizar_plano_distribucion_pdf(pdf_path: str) -> Dict[str, Any]:
                         })
                         break
                         
-            # Buscar menciones a ventanas
+            # 2. Buscar menciones a ventanas
             match_v = regex_ventana.finditer(text)
             for mv in match_v:
                 ancho_cm = float(mv.group(1))
@@ -72,7 +92,7 @@ def analizar_plano_distribucion_pdf(pdf_path: str) -> Dict[str, Any]:
                     "pagina": page_idx + 1
                 })
 
-    # Eliminar duplicados en estancias si se encontraron en la misma posición
+    # Deduplicar estancias
     estancias_unicas = []
     nombres_vistos = set()
     for est in estancias_detectadas:
@@ -92,4 +112,3 @@ def analizar_plano_distribucion_pdf(pdf_path: str) -> Dict[str, Any]:
         "num_ventanas_detectadas": len(ventanas_detectadas),
         "ventanas": ventanas_detectadas
     }
-
