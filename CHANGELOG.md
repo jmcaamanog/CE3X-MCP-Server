@@ -4,6 +4,23 @@ En este documento se detalla la evolución completa del servidor oficial MCP par
 
 ---
 
+### Versión 1.4.0 — 16/10/2026: 🚀 25 Herramientas Oficiales, Cálculos ISO 10077-1, ACS CTE DB-HE 4 y Matriz Exhaustiva de Variantes
+
+* **🪟 Cálculo de Transmitancia de Ventana UNE-EN ISO 10077-1 (`calcular_transmitancia_ventana_iso10077`):**
+  - Implementación del cálculo oficial por componentes: vidrio ($U_g$), marco ($U_f$), intercalario perimetral ($\Psi_g$) y fracción de hueco.
+  - Comprobación automática de cumplimiento de límites de transmitancia del CTE DB-HE 1 según zona climática.
+* **🚿 Demanda de Agua Caliente Sanitaria Oficial CTE DB-HE 4 (`calcular_demanda_acs_cte_he4`):**
+  - Cálculo de ocupación de diseño y dotación de referencia (28 l/día a 60 °C por persona en residencial privado).
+  - Temperatura de agua de red provincial mes a mes para estimación exacta de demanda energética anual ($kWh/año$).
+* **🧪 Batería Exhaustiva de Matrices de Escenarios y Variantes (100% Passed):**
+  - Validación de envolventes y muros históricos (Pre-1979, NBE-CT-79, CTE 2006, CTE 2013, CTE 2019 nZEB).
+  - Validación de 8 combinaciones de climatización (Gas estándar, Condensación, Gasóleo, Efecto Joule, Bomba de calor inverter, Aerotermia, Biomasa y VRF).
+  - Validación de 6 orientaciones cardinales e intermedias, con sombras por voladizo, retranqueo, toldos y edificios colindantes remotos.
+  - Validación de puentes térmicos lineales (DA DB-HE / 3) y ensayos de flujometría in situ s/ UNE-EN ISO 9869-1.
+  - Validación de saltos de letra energética (hasta letra A) y dictámenes de subvención NextGen EU (tramos 40%, 65%, 80% y deducciones IRPF).
+
+---
+
 ### Versión 1.3.0 — 16/10/2026: 🚀 22 Herramientas Oficiales, Instalador 1-Clic e Integración PyPI
 
 * **🖱️ Instalador Automático de 1 Clic para Windows (`instalar_en_claude_desktop.bat`):**

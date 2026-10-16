@@ -59,7 +59,9 @@ from ce3x_mcp.services.trials_and_tests import (
     calcular_sombras_estacionales_hueco,
     calcular_patron_sombras_edificio_colindante,
     estimar_parametros_terciario_comercial,
-    registrar_ensayo_flujometria_termica_iso9869
+    registrar_ensayo_flujometria_termica_iso9869,
+    calcular_transmitancia_ventana_iso10077,
+    calcular_demanda_acs_cte_he4
 )
 from ce3x_mcp.services.technician_profile import guardar_perfil_tecnico, obtener_perfil_tecnico
 from ce3x_mcp.services.smart_folder_auditor import auditar_carpeta_inmueble, certificar_inmueble_desde_carpeta, organizar_carpeta_visita as organizar_carpeta_visita_impl
@@ -697,6 +699,50 @@ def registrar_ensayo_flujometria_termica_in_situ(
         temp_exterior_media_c=temp_exterior_media_c,
         duracion_ensayo_horas=duracion_ensayo_horas,
         elemento_analizado=elemento_analizado
+    )
+
+
+
+@mcp.tool()
+def calcular_transmitancia_ventana_iso10077(
+    ancho_m: float,
+    alto_m: float,
+    u_vidrio_w_m2k: float,
+    u_marco_w_m2k: float,
+    fraccion_marco: float = 0.25,
+    tipo_intercalario: str = "termicamente_mejorado"
+) -> Dict[str, Any]:
+    """
+    Calcula la transmitancia termica total Uw (W/m2K) de una ventana conforme a la norma
+    UNE-EN ISO 10077-1 (metodo de componentes: vidrio Ug, marco Uf y puente termico de intercalario
+    Psi_g) para justificar el nivel conocido de huecos en el software oficial CE3X v3.2.
+    """
+    return calcular_transmitancia_ventana_iso10077(
+        ancho_m=ancho_m,
+        alto_m=alto_m,
+        u_vidrio_w_m2k=u_vidrio_w_m2k,
+        u_marco_w_m2k=u_marco_w_m2k,
+        fraccion_marco=fraccion_marco,
+        tipo_intercalario=tipo_intercalario
+    )
+
+@mcp.tool()
+def calcular_demanda_acs_cte_he4(
+    numero_dormitorios: int = 3,
+    numero_personas: Optional[float] = None,
+    provincia: str = "A Coruña",
+    tipo_edificio: str = "ViviendaBloque"
+) -> Dict[str, Any]:
+    """
+    Calcula la demanda normativa obligatoria de Agua Caliente Sanitaria (ACS) a 60 C en litros/dia
+    y la demanda energetica anual en kWh/ano conforme a la Tabla 3.1 del CTE DB-HE 4 y la temperatura
+    media provincial del agua de red para introducir en los Datos Generales de CE3X.
+    """
+    return calcular_demanda_acs_cte_he4(
+        numero_dormitorios=numero_dormitorios,
+        numero_personas=numero_personas,
+        provincia=provincia,
+        tipo_edificio=tipo_edificio
     )
 
 @mcp.resource("ce3x://normativa/factores_paso")

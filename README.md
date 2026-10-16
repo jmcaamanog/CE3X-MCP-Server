@@ -47,7 +47,7 @@
 > Sigue estos 3 pasos inmediatos para tener la herramienta funcionando en 1 minuto:
 > 
 > 1. **Doble Clic al Instalador:** Haz doble clic sobre [`instalar_en_claude_desktop.bat`](./instalar_en_claude_desktop.bat) en la raíz del repositorio. Configurará Claude Desktop y Cursor automáticamente sin tocar nada de código.
-> 2. **Abre Claude Desktop o Cursor:** El servidor `ce3x` aparecerá conectado y listo para usar con sus **23 herramientas oficiales**.
+> 2. **Abre Claude Desktop o Cursor:** El servidor `ce3x` aparecerá conectado y listo para usar con sus **25 herramientas oficiales**.
 > 3. **Escribe en el chat:**  
 >    > *"Certifica la vivienda de la carpeta `ejemplos/visita_vivienda_ejemplo`"*  
 >    *(Verás cómo la IA organiza las fotos, planos y notas, y genera la carpeta `CERTIFICADO/` con los archivos oficiales).*
@@ -166,7 +166,7 @@ Y en tu archivo de configuración MCP indicas el intérprete local:
 
 ---
 
-## 🛠️ Catálogo Completo de 23 Herramientas MCP Disponibles
+## 🛠️ Catálogo Completo de 25 Herramientas MCP Disponibles
 
 El servidor implementa el mapeo total y exhaustivo de CE3X v3.2, manuales técnicos y normativas oficiales:
 
@@ -199,6 +199,10 @@ El servidor implementa el mapeo total y exhaustivo de CE3X v3.2, manuales técni
 16. `calcular_sombras_obstaculo_edificio_enfrente(distancia, altura, orientacion)`: Ángulo alfa y factor de sombra por edificio enfrente / obstáculo remoto.
 17. `calcular_parametros_terciario_local_comercial(tipo, m2, luminarias)`: Potencia de iluminación W/m², VEEI según DB-HE 3 y caudal RITE.
 18. `configurar_perfil_tecnico_colegiado(nombre, nif, titulacion, colegio)`: Registro persistente de la firma y credenciales del técnico.
+
+### 📐 Cálculos Normativos Especializados (ISO & CTE)
+24. `calcular_transmitancia_ventana_iso10077(ancho, alto, u_vidrio, u_marco, fraccion_marco, intercalario)`: Cálculo riguroso de transmitancia térmica total $U_w$ según la norma UNE-EN ISO 10077-1 (vidrio $U_g$, marco $U_f$, fracción de hueco y puente térmico perimetral $\Psi_g$).
+25. `calcular_demanda_acs_cte_he4(numero_dormitorios, provincia, ocupantes, litros_persona_dia)`: Demanda reglamentaria obligatoria de ACS a 60 °C ($l/día$ y $kWh/año$) según dotaciones del CTE DB-HE 4 y tabla mensual de temperatura de red provincial.
 
 ### 📂 Gestión Integral de Carpeta de Visita y Entregables
 19. `organizar_carpeta_visita(ruta_carpeta)`: Auto-organizador inteligente en 5 carpetas (INFORMACION, PLANOS, FOTOS, INSTALACIONES, CERTIFICADO).

@@ -347,3 +347,110 @@ def registrar_ensayo_flujometria_termica_iso9869(
         "nivel_ce3x": "Conocido (Ensayo in situ de flujometria)",
         "texto_anexo_iv": f"Ensayo de flujometria termica in situ s/ UNE-EN ISO 9869-1 ({duracion_ensayo_horas}h) en {elemento_analizado}. Transmitancia medida U = {u_medido} W/m2K."
     }
+
+
+def calcular_transmitancia_ventana_iso10077(
+    ancho_m: float,
+    alto_m: float,
+    u_vidrio_w_m2k: float,
+    u_marco_w_m2k: float,
+    fraccion_marco: float = 0.25,
+    tipo_intercalario: str = "termicamente_mejorado"
+) -> Dict[str, Any]:
+    """
+    Calcula la transmitancia termica total Uw (W/m2K) de una ventana conforme a la norma oficial
+    UNE-EN ISO 10077-1 (metodo de componentes: vidrio Ug, marco Uf e intercalario Psi_g) para CE3X.
+    """
+    if ancho_m <= 0 or alto_m <= 0:
+        raise ValueError("Las dimensiones de la ventana deben ser mayores que cero.")
+    if not (0.05 <= fraccion_marco <= 0.60):
+        raise ValueError("La fraccion de marco debe estar comprendida entre 0.05 y 0.60.")
+        
+    area_total = ancho_m * alto_m
+    area_marco = area_total * fraccion_marco
+    area_vidrio = area_total - area_marco
+    
+    lado_g_ancho = ancho_m * (1.0 - (fraccion_marco / 2.0))
+    lado_g_alto = alto_m * (1.0 - (fraccion_marco / 2.0))
+    perimetro_vidrio = 2.0 * (lado_g_ancho + lado_g_alto)
+    
+    intercalarios = {
+        "aluminio": 0.08,
+        "acero": 0.06,
+        "termicamente_mejorado": 0.04,
+        "warm_edge": 0.04
+    }
+    psi_g = intercalarios.get(tipo_intercalario.strip().lower(), 0.04)
+    
+    flujo_vidrio = area_vidrio * u_vidrio_w_m2k
+    flujo_marco = area_marco * u_marco_w_m2k
+    flujo_borde = perimetro_vidrio * psi_g
+    
+    u_w = (flujo_vidrio + flujo_marco + flujo_borde) / area_total
+    u_w_redondeado = round(u_w, 2)
+    cumple_cte_2019 = u_w_redondeado <= 1.80
+    
+    return {
+        "valido": True,
+        "norma_calculo": "UNE-EN ISO 10077-1",
+        "dimensiones_m": f"{ancho_m} x {alto_m}",
+        "area_total_m2": round(area_total, 2),
+        "area_vidrio_m2": round(area_vidrio, 2),
+        "area_marco_m2": round(area_marco, 2),
+        "porcentaje_marco_pct": round(fraccion_marco * 100.0, 1),
+        "u_vidrio_ug_w_m2k": u_vidrio_w_m2k,
+        "u_marco_uf_w_m2k": u_marco_w_m2k,
+        "psi_intercalario_w_mk": psi_g,
+        "u_ventana_uw_w_m2k": u_w_redondeado,
+        "cumple_limite_cte_db_he": cumple_cte_2019,
+        "clasificacion_eficiencia": "Alta eficiencia termica" if u_w_redondeado <= 1.4 else ("Estandar conforme CTE" if u_w_redondeado <= 2.2 else "Baja eficiencia")
+    }
+
+def calcular_demanda_acs_cte_he4(
+    numero_dormitorios: int = 3,
+    numero_personas: Optional[float] = None,
+    provincia: str = "A Coruña",
+    tipo_edificio: str = "ViviendaBloque"
+) -> Dict[str, Any]:
+    """
+    Calcula la demanda de referencia de Agua Caliente Sanitaria (ACS) a 60 C en litros/dia
+    y la demanda energetica anual en kWh/ano segun las especificaciones del CTE DB-HE 4 y CE3X.
+    """
+    ocupacion_dormitorios = {
+        1: 1.5,
+        2: 3.0,
+        3: 4.0,
+        4: 5.0,
+        5: 6.0
+    }
+    personas = numero_personas if numero_personas and numero_personas > 0 else ocupacion_dormitorios.get(min(max(1, numero_dormitorios), 5), 4.0)
+    litros_dia_60c = round(personas * 28.0, 1)
+    
+    prov = provincia.strip().lower()
+    if any(p in prov for p in ["coruña", "lugo", "ourense", "pontevedra", "asturias", "cantabria", "vizcaya", "guipuzcoa"]):
+        temp_red_media_c = 13.0
+    elif any(p in prov for p in ["madrid", "castilla", "leon", "albacete", "zaragoza", "huesca", "teruel", "navarra", "la rioja"]):
+        temp_red_media_c = 11.5
+    elif any(p in prov for p in ["sevilla", "cadiz", "huelva", "malaga", "almeria", "cordoba", "jaen", "murcia", "valencia", "alicante", "baleares", "palmas", "tenerife"]):
+        temp_red_media_c = 15.5
+    else:
+        temp_red_media_c = 13.5
+        
+    delta_t = 60.0 - temp_red_media_c
+    demanda_diaria_kwh = litros_dia_60c * 0.001163 * delta_t
+    demanda_anual_kwh = round(demanda_diaria_kwh * 365.0, 1)
+    
+    return {
+        "valido": True,
+        "normativa": "CTE DB-HE 4 (Tabla 3.1)",
+        "numero_dormitorios": numero_dormitorios,
+        "ocupantes_calculo": personas,
+        "provincia": provincia,
+        "temperatura_agua_red_media_c": temp_red_media_c,
+        "salto_termico_delta_t_c": round(delta_t, 1),
+        "demanda_diaria_litros_60c": litros_dia_60c,
+        "demanda_diaria_kwh": round(demanda_diaria_kwh, 2),
+        "demanda_anual_kwh_ano": demanda_anual_kwh,
+        "contribucion_solar_minima_recomendada_pct": 60 if litros_dia_60c < 5000 else 70,
+        "valor_para_panel_ce3x": litros_dia_60c
+    }

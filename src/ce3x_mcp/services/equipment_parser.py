@@ -10,7 +10,7 @@ def analizar_datos_equipo_climatizacion(texto_o_ficha: str) -> Dict[str, Any]:
     texto = texto_o_ficha.lower()
     
     # 1. Detección de Tecnología y Servicio
-    if "aerotermia" in texto or "bomba de calor" in texto or "heat pump" in texto:
+    if "aerotermia" in texto or "bomba de calor" in texto or "heat pump" in texto or "vrf" in texto or "inverter" in texto:
         tecnologia = "BombaCalorAerotermia"
         vector = "Electricidad"
         servicio = "Mixto2" if ("acs" in texto and ("calefacción" in texto or "calefaccion" in texto)) else ("ACS" if "acs" in texto else "Calefaccion")
@@ -20,6 +20,11 @@ def analizar_datos_equipo_climatizacion(texto_o_ficha: str) -> Dict[str, Any]:
         vector = "GasNatural"
         servicio = "Mixto2" if ("acs" in texto or "mixta" in texto) else "Calefaccion"
         rendimiento_def = 0.94
+    elif "gasóleo" in texto or "gasoleo" in texto or "gasoil" in texto:
+        tecnologia = "CalderaEstandar"
+        vector = "Gasoleo"
+        servicio = "Mixto2" if ("acs" in texto or "mixta" in texto) else "Calefaccion"
+        rendimiento_def = 0.80
     elif "pellet" in texto or "biomasa" in texto:
         tecnologia = "Biomasa"
         vector = "BiomasaPellet"
@@ -44,15 +49,22 @@ def analizar_datos_equipo_climatizacion(texto_o_ficha: str) -> Dict[str, Any]:
             potencia_kw = float(match_kw.group(1).replace(',', '.'))
         except ValueError:
             pass
+    else:
+        match_w = re.search(r'(\d+)\s*(?:w|vatios)(?:\b|\s|$)', texto)
+        if match_w:
+            try:
+                potencia_kw = round(float(match_w.group(1)) / 1000.0, 2)
+            except ValueError:
+                pass
             
     # 3. Extracción de Rendimiento Estacional (SCOP / COP / Rendimiento %)
     rendimiento = rendimiento_def
-    match_scop = re.search(r'(?:scop|cop|seer|eer|rendimiento)\s*(?:de\s+|[:=]\s*)?(\d+[.,]?\d*)', texto)
+    match_scop = re.search(r'(?:scop|cop|seer|eer|rendimiento)\s*(?:de\s+|estacional\s+del\s+|[:=]\s*)?(\d+[.,]?\d*)%?', texto)
     if match_scop:
         try:
             val = float(match_scop.group(1).replace(',', '.'))
-            if val > 10.0: # viene expresado en %
-                rendimiento = val / 100.0
+            if val > 10.0:
+                rendimiento = round(val / 100.0, 2)
             elif val > 0:
                 rendimiento = val
         except ValueError:
@@ -77,5 +89,3 @@ def analizar_datos_equipo_climatizacion(texto_o_ficha: str) -> Dict[str, Any]:
         "rendimiento_estacional": rendimiento,
         "objeto_instalacion": inst.model_dump()
     }
-
-

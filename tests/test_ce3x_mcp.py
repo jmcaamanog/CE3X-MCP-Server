@@ -19,8 +19,11 @@ from ce3x_mcp.services.trials_and_tests import (
     calcular_sombras_estacionales_hueco,
     calcular_patron_sombras_edificio_colindante,
     estimar_parametros_terciario_comercial,
-    registrar_ensayo_flujometria_termica_iso9869
+    registrar_ensayo_flujometria_termica_iso9869,
+    calcular_transmitancia_ventana_iso10077,
+    calcular_demanda_acs_cte_he4
 )
+from ce3x_mcp.services.libraries import CATALOGO_MUROS_FACHADA, CATALOGO_MARCOS_CARPINTERIA
 from ce3x_mcp.services.technician_profile import guardar_perfil_tecnico, obtener_perfil_tecnico
 from ce3x_mcp.services.libraries import inferir_solucion_envolvente_por_ano, CATALOGO_VIDRIOS
 from ce3x_mcp.services.nextgen_report import generar_informe_justificativo_nextgen
@@ -215,7 +218,127 @@ def test_trials_and_tests():
     assert flujo["valido"] is True
     assert flujo["u_medido_w_m2k"] > 0.5
 
-    print("[PASS] test_trials_and_tests (visita oficial, blower door, puentes termicos, facturas, sombras, obstaculo remoto, terciario y perfil tecnico)")
+    # 10. Transmitancia de ventana UNE-EN ISO 10077-1
+    win = calcular_transmitancia_ventana_iso10077(1.20, 1.40, 1.1, 1.4, 0.25, "termicamente_mejorado")
+    assert win["valido"] is True
+    assert win["u_ventana_uw_w_m2k"] < 1.6
+    assert win["cumple_limite_cte_db_he"] is True
+
+    # 11. Demanda de ACS segun CTE DB-HE 4
+    acs = calcular_demanda_acs_cte_he4(numero_dormitorios=3, provincia="Madrid")
+    assert acs["valido"] is True
+    assert acs["demanda_diaria_litros_60c"] == 112.0
+    assert acs["demanda_anual_kwh_ano"] > 2000.0
+
+    print("[PASS] test_trials_and_tests (visita, blower door, puentes termicos, facturas, sombras, ISO 10077, ACS CTE HE4, flujometria y perfil)")
+
+
+
+
+def test_exhaustive_matrix_scenarios():
+    """
+    Bateria exhaustiva de pruebas de validacion de todos los escenarios y variantes posibles:
+    1. Tipos de muros y envolvente historica (Pre-79, NBE-CT-79, CTE 2006, CTE 2013, CTE 2019 nZEB).
+    2. Variantes de climatizacion (Gas convencional, Condensacion, Gasoleo, Efecto Joule, Bomba Calor, Aerotermia, Biomasa, VRF).
+    3. Orientaciones (N, S, E, O) y factores reductores de sombra (voladizos, retranqueos, toldos, obstaculos remotos).
+    4. Transmitancia de ventanas UNE-EN ISO 10077-1 con todo tipo de marcos y vidrios.
+    5. Demanda de ACS segun CTE DB-HE 4 (dormitorios 1 a 5 y provincias).
+    6. Puentes termicos (DA DB-HE / 3) y ensayo de flujometria termica ISO 9869-1.
+    7. Paquetes de medidas de mejora RD 390/2021 y dictamenes de subvencion NextGen EU (40%, 65%, 80% e IRPF).
+    """
+    # 1. Muros y Envolvente Historica
+    epocas = [
+        (1965, "Anterior1979", 1.80, 2.20, 5.70),
+        (1985, "NBE_CT_79", 1.20, 1.10, 3.80),
+        (2008, "CTE_2006", 0.66, 0.45, 2.80),
+        (2016, "CTE_2013", 0.45, 0.35, 2.20),
+        (2022, "CTE_2019", 0.35, 0.28, 1.60),
+    ]
+    for ano, norm, u_fach, u_cub, u_huec in epocas:
+        t = estimar_transmitancias_por_ano(ano, "C1")
+        assert t["normativa"] == norm
+        assert t["u_fachada"] == u_fach
+        assert t["u_cubierta"] == u_cub
+        assert t["u_hueco"] == u_huec
+
+        sol = inferir_solucion_envolvente_por_ano(ano, region="Norte")
+        assert sol["fachada_recomendada"]["transmitancia_U"] > 0
+        assert sol["vidrio_recomendado"]["transmitancia_Ug"] > 0
+        assert sol["marco_recomendado"]["transmitancia_Uf"] > 0
+
+    # 2. Climatizacion e Instalaciones (8 variantes)
+    equipos = [
+        ("Caldera de gas estandar de 24 kW con rendimiento estacional del 78%", 24.0, "GasNatural"),
+        ("Caldera de condensacion Saunier Duval Thelia Condens 25 kW", 25.0, "GasNatural"),
+        ("Caldera de gasoleo Ferroli Silent D 30 kW para calefaccion", 30.0, "Gasoleo"),
+        ("Termo electrico de 80 litros con resistencia de 1500W para ACS", 1.5, "Electricidad"),
+        ("Bomba de calor aerotermica Daikin Altherma 11 kW SCOP 4.2", 11.0, "Electricidad"),
+        ("Bomba de calor reversible inverter split 3.5 kW SEER 6.1 SCOP 4.0", 3.5, "Electricidad"),
+        ("Caldera de pellets de biomasa OkoFEN 15 kW rendimiento 92%", 15.0, "BiomasaPellet"),
+        ("Sistema de climatizacion VRF de caudal variable de 28 kW en cubierta", 28.0, "Electricidad"),
+    ]
+    for desc, pot, comb in equipos:
+        eq = analizar_datos_equipo_climatizacion(desc)
+        assert eq["potencia_nominal_kw"] == pot
+        assert eq["vector_energetico"] == comb
+        assert eq["rendimiento_estacional"] > 0.5
+
+    # 3. Orientaciones y Sombras
+    for ori in ["Norte", "Sur", "Este", "Oeste", "Noreste", "Suroeste"]:
+        sh = calcular_sombras_estacionales_hueco(
+            orientacion=ori,
+            ancho_hueco_m=1.20,
+            alto_hueco_m=1.40,
+            retranqueo_m=0.15,
+            vuelo_voladizo_m=0.60,
+            tiene_toldo=True
+        )
+        assert sh["valido"] is True
+        assert sh["factor_sombra_verano"] < sh["factor_sombra_invierno"]
+
+    obs_estrecha = calcular_patron_sombras_edificio_colindante(distancia_edificio_m=8.0, altura_edificio_m=18.0)
+    assert obs_estrecha["angulo_elevacion_alfa_grados"] > 60.0
+    assert obs_estrecha["factor_sombra_invierno_fsh"] <= 0.40
+
+    obs_ancha = calcular_patron_sombras_edificio_colindante(distancia_edificio_m=35.0, altura_edificio_m=12.0)
+    assert obs_ancha["angulo_elevacion_alfa_grados"] < 30.0
+    assert obs_ancha["factor_sombra_verano_fsh"] >= 0.85
+
+    # 4. Transmitancia Ventanas ISO 10077-1
+    w_antigua = calcular_transmitancia_ventana_iso10077(1.20, 1.40, 5.7, 4.0, 0.25, "aluminio")
+    assert w_antigua["u_ventana_uw_w_m2k"] > 4.5
+    w_nizeb = calcular_transmitancia_ventana_iso10077(1.50, 1.80, 1.0, 1.2, 0.20, "warm_edge")
+    assert w_nizeb["u_ventana_uw_w_m2k"] <= 1.4
+    assert w_nizeb["cumple_limite_cte_db_he"] is True
+
+    # 5. Demanda ACS CTE DB-HE 4
+    for dorms, pers_esp, lit_esp in [(1, 1.5, 42.0), (2, 3.0, 84.0), (3, 4.0, 112.0), (4, 5.0, 140.0)]:
+        acs = calcular_demanda_acs_cte_he4(numero_dormitorios=dorms, provincia="Madrid")
+        assert acs["ocupantes_calculo"] == pers_esp
+        assert acs["demanda_diaria_litros_60c"] == lit_esp
+        assert acs["demanda_anual_kwh_ano"] > 500.0
+
+    # 6. Puentes Termicos y Flujometria ISO 9869
+    for ano, expected_psi in [(1970, 0.85), (1995, 0.50), (2010, 0.30), (2022, 0.12)]:
+        pt = calcular_puentes_termicos_cte(ano_construccion=ano, perimetro_forjado_m=40.0, perimetro_huecos_m=30.0)
+        assert pt["psi_frente_forjado_w_mk"] == expected_psi
+        assert pt["perdida_total_puentes_termicos_w_k"] > 5.0
+
+    flujo_ensayo = registrar_ensayo_flujometria_termica_iso9869(flujo_medio_w_m2=18.5, temp_interior_media_c=21.0, temp_exterior_media_c=4.5)
+    assert flujo_ensayo["valido"] is True
+    assert 0.8 <= flujo_ensayo["u_medido_w_m2k"] <= 1.5
+
+    # 7. Medidas de Mejora RD 390 y NextGen EU
+    from ce3x_mcp.server import proponer_medidas_mejora_rd390, emitir_dictamen_subvenciones_nextgen
+    prop = proponer_medidas_mejora_rd390(superficie_util=100.0, ano_construccion=1975, zona_climatica="D3")
+    assert len(prop["medidas_de_mejora"]) == 3
+    assert prop["medidas_de_mejora"][2]["nueva_letra_emisiones"] == "A"
+
+    dictamen_p3 = emitir_dictamen_subvenciones_nextgen(superficie_util=100.0, ano_construccion=1975, zona_climatica="D3", paquete_mejora=3)
+    assert dictamen_p3["cumple_umbral_nextgen_30"] is True
+    assert dictamen_p3["porcentaje_ahorro_epnr"] >= 60.0
+
+    print("[PASS] test_exhaustive_matrix_scenarios (muros, HVAC, orientaciones, sombras, ISO 10077, ACS HE4, puentes termicos, NextGen)")
 
 
 if __name__ == "__main__":
@@ -227,5 +350,6 @@ if __name__ == "__main__":
     test_improvement_engine_and_nextgen()
     test_pvgis()
     test_trials_and_tests()
-    print("\nTODOS LOS TESTS UNITARIOS Y DE INTEGRACIÓN HAN PASADO EXITOSAMENTE (100%)!")
+    test_exhaustive_matrix_scenarios()
+    print("\nTODOS LOS TESTS UNITARIOS, DE INTEGRACIÓN Y MATRICES DE ESCENARIOS HAN PASADO EXITOSAMENTE (100%)!")
 
