@@ -51,6 +51,13 @@ from ce3x_mcp.services.improvement_engine import calcular_paquetes_medidas_mejor
 from ce3x_mcp.services.pvgis_client import calcular_produccion_solar_pvgis
 from ce3x_mcp.services.nextgen_report import generar_informe_justificativo_nextgen
 from ce3x_mcp.services.plan_parser import analizar_plano_distribucion_pdf
+from ce3x_mcp.services.smart_folder_auditor import auditar_carpeta_inmueble
+from ce3x_mcp.services.libraries import (
+    CATALOGO_MUROS_FACHADA,
+    CATALOGO_VIDRIOS,
+    CATALOGO_MARCOS_CARPINTERIA,
+    inferir_solucion_envolvente_por_ano
+)
 
 # Instancia oficial del servidor FastMCP
 mcp = FastMCP(
@@ -388,6 +395,38 @@ def generar_certificado_completo(
         "archivo_cex_ce3x": cex_path,
         "resumen_energetico": calc
     }
+
+
+@mcp.tool()
+def auditar_carpeta_visita(ruta_carpeta: str) -> Dict[str, Any]:
+    """
+    Audita de forma autónoma una carpeta de visita técnica (croquis, notas, planos PDF,
+    imágenes, modelos BIM), extrae datos catastrales y arquitectónicos, deduce la envolvente
+    según normativa histórica y genera las preguntas quirúrgicas para el técnico antes de certificar.
+    """
+    return auditar_carpeta_inmueble(ruta_carpeta)
+
+@mcp.resource("ce3x://librerias/catalogo_soluciones_constructivas")
+def obtener_catalogo_soluciones_constructivas() -> str:
+    """Catálogo oficial de arquetipos constructivos de muros, vidrios y carpinterías según IDAE y CE3X."""
+    import json
+    catalogo = {
+        "muros_fachada": CATALOGO_MUROS_FACHADA,
+        "vidrios": CATALOGO_VIDRIOS,
+        "marcos_carpinteria": CATALOGO_MARCOS_CARPINTERIA
+    }
+    return json.dumps(catalogo, indent=2, ensure_ascii=False)
+
+@mcp.prompt()
+def asistente_auditoria_carpeta_visita(ruta_carpeta: str = "ruta/a/carpeta_inmueble") -> str:
+    """Asistente para auditar una carpeta de visita y realizar la entrevista interactiva al técnico."""
+    return (
+        f"Por favor, analiza la carpeta de visita '{ruta_carpeta}'. "
+        "Ejecuta la herramienta 'auditar_carpeta_visita' para identificar qué documentos "
+        "y datos catastrales o de planos están presentes. Presenta un resumen conciso "
+        "y hazme únicamente las preguntas sobre los datos críticos que falten (sombras, color de marcos, instalaciones) "
+        "antes de generar el certificado completo."
+    )
 
 @mcp.resource("ce3x://normativa/factores_paso")
 def obtener_factores_paso_normativos() -> str:
