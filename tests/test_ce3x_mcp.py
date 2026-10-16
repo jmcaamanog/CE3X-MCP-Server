@@ -1,4 +1,4 @@
-﻿import sys
+import sys
 import os
 
 sys.path.insert(0, r"C:\Users\Jose\OneDrive\GITHUB\CE3X-MCP-Server\src")
