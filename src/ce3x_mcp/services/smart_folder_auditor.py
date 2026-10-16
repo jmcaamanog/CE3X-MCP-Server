@@ -33,7 +33,7 @@ from ce3x_mcp.core.models import (
     ResultadoCalificacion
 )
 
-REGEX_RC_20 = re.compile(r"\b([0-9]{7}[A-Z]{2}[0-9]{4}[A-Z]{1}[0-9]{4}[A-Z]{2})\b")
+REGEX_RC_20 = re.compile(r"(?<![0-9A-Z])([0-9]{7}[A-Z]{2}[0-9]{4}[A-Z]{1}[0-9]{4}[A-Z]{2})(?![0-9A-Z])")
 REGEX_CP = re.compile(r"\b(0[1-9]|[1-4][0-9]|5[0-2])[0-9]{3}\b")
 
 # Palabras clave para la clasificación automática
