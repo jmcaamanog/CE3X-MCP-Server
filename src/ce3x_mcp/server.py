@@ -394,6 +394,50 @@ def certificar_vivienda_rapido() -> str:
         "4. Tipo de calefacción y producción de agua caliente sanitaria (ej. caldera de gas natural, radiadores eléctricos, aerotermia, termo eléctrico)."
     )
 
+@mcp.resource("ce3x://normativa/u_valores_historicos")
+def obtener_u_valores_historicos() -> str:
+    """Valores de transmitancia térmica U límite e histórica por defecto según la normativa vigente en el año de construcción."""
+    import json
+    datos = {
+        "anterior_1979": {"normativa": "Sin aislamiento reglamentario", "u_fachada": 1.80, "u_cubierta": 1.40, "u_hueco": 5.7},
+        "1980_2006": {"normativa": "NBE-CT-79", "u_fachada": 1.40, "u_cubierta": 0.90, "u_hueco": 2.80},
+        "2007_2013": {"normativa": "CTE DB-HE 2006", "u_fachada": 0.73, "u_cubierta": 0.50, "u_hueco": 2.20},
+        "2014_2019": {"normativa": "CTE DB-HE 2013", "u_fachada": 0.52, "u_cubierta": 0.40, "u_hueco": 2.00},
+        "2020_actual": {"normativa": "CTE DB-HE 2019 (nZEB)", "u_fachada": 0.29, "u_cubierta": 0.23, "u_hueco": 1.60}
+    }
+    return json.dumps(datos, indent=2, ensure_ascii=False)
+
+@mcp.resource("ce3x://plantillas/toma_datos_campo")
+def obtener_plantilla_toma_datos() -> str:
+    """Plantilla de toma de datos optimizada para que el técnico o usuario recopile datos del inmueble en visita."""
+    doc_path = r"C:\Users\Jose\OneDrive\GITHUB\CE3X-MCP-Server\docs\PLANTILLA_TOMA_DATOS_CEE.md"
+    try:
+        with open(doc_path, "r", encoding="utf-8") as f:
+            return f.read()
+    except Exception:
+        return "Plantilla no disponible."
+
+@mcp.prompt()
+def asistente_toma_datos_inmueble() -> str:
+    """Asistente conversacional interactivo para guiar la toma de datos del certificado energético paso a paso."""
+    return """Actúa como un Arquitecto Técnico especialista en eficiencia energética.
+Guíame paso a paso en la toma de datos de un inmueble:
+1. Solicita primero la Referencia Catastral (20 dígitos) o dirección para consultar Catastro automáticamente.
+2. Pregunta si se dispone de plano (PDF/imagen) o croquis para extraer las superficies y huecos.
+3. Pregunta por los sistemas de calefacción y ACS (solicitando foto de la placa de características de la caldera si está disponible).
+4. Si no se conoce la composición de muros, estima las transmitancias por defecto según la época de edificación.
+5. Concluye resumiendo los datos recopilados antes de generar los entregables (.cex, XML oficial v3.0 y PDF de 15 páginas)."""
+
+@mcp.prompt()
+def auditoria_subvenciones_nextgen() -> str:
+    """Guía paso a paso para auditar la elegibilidad de subvenciones Next Generation EU (RD 853/2021) y deducciones IRPF."""
+    return """Actúa como consultor de ayudas públicas a la rehabilitación energética.
+Para la vivienda o edificio analizado, realiza los siguientes cálculos:
+1. Comprueba si el ahorro en energía primaria no renovable alcanza al menos el umbral legal del 30%.
+2. Identifica el tramo de ayuda según el porcentaje de ahorro conseguido: 40%, 65% u 80% (o hasta 100% en vulnerabilidad).
+3. Calcula la deducción en el IRPF correspondiente (40% o 60% en rehabilitación integral).
+4. Emite el dictamen técnico justificativo oficial listo para registrar ante la administración autonómica."""
+
 def main():
     mcp.run()
 
