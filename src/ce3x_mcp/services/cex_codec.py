@@ -294,7 +294,14 @@ def guardar_fichero_cex_completo(
         lines[48] = b"aV" + to_lat(tec_mun)
         lines[50] = b"aV" + to_lat(tec_cp)
         lines[52] = b"aV" + to_lat(tec_tit)
-        lines[54] = b"aV" + to_lat(tec_col)
+        # Grado de protección del edificio (obj1[26])
+        # Controles Choice de CE3X admiten estrictamente: 'Ninguna', 'Integral', 'Estructural', 'Ambiental'
+        # NUNCA inyectar texto de colegio profesional aquí, ya que pertenece al XML y PDF oficial,
+        # y en CE3X provoca una excepción en wx.Choice.SetStringSelection que congela el diálogo 'Abriendo...'
+        grado_prot = kwargs.get("grado_proteccion", "Ninguna")
+        if grado_prot not in ["Integral", "Estructural", "Ambiental"]:
+            grado_prot = "Ninguna"
+        lines[54] = b"aV" + to_lat(grado_prot)
 
         # Mutación quirúrgica en Objeto 2 (Datos Generales, índices 60-75)
         lines[60] = b"V" + to_lat(norm_str)
