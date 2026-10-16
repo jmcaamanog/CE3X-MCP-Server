@@ -1,0 +1,11 @@
+================================================================================
+ESTRUCTURA ESTANDAR DE CARPETA DE VISITA Y CERTIFICACION ENERGETICA
+================================================================================
+Esta carpeta ha sido organizada conforme al estandar profesional:
+
+📁 1. INFORMACION/   -> Notas de visita, Referencia Catastral, apuntes, datos del cliente.
+📁 2. PLANOS/        -> Planos de distribucion en PDF, croquis acotados, modelos BIM (IFC/DWG).
+📁 3. FOTOS/         -> Fotografias del inmueble (fachada exterior, huecos y carpinterias, vistas).
+📁 4. INSTALACIONES/ -> Fotos de placas de calderas, termos, bombas de calor y fichas tecnicas.
+📁 5. CERTIFICADO/   -> Entregables oficiales finales (.cex, .xml, .pdf y mejoras NextGen).
+================================================================================

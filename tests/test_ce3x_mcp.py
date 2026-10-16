@@ -15,8 +15,10 @@ from ce3x_mcp.services.trials_and_tests import (
     registrar_visita_e_inspeccion,
     registrar_ensayo_blower_door,
     calcular_puentes_termicos_cte,
-    contrastar_facturas_reales
+    contrastar_facturas_reales,
+    calcular_sombras_estacionales_hueco
 )
+from ce3x_mcp.services.technician_profile import guardar_perfil_tecnico, obtener_perfil_tecnico
 from ce3x_mcp.services.libraries import inferir_solucion_envolvente_por_ano, CATALOGO_VIDRIOS
 from ce3x_mcp.services.nextgen_report import generar_informe_justificativo_nextgen
 from ce3x_mcp.services.plan_parser import analizar_plano_distribucion_pdf
@@ -183,7 +185,17 @@ def test_trials_and_tests():
     assert abs(cf["desviacion_porcentual"]) < 5.0
     assert "Alineado" in cf["diagnostico_contraste"]
 
-    print("[PASS] test_trials_and_tests (visita oficial, blower door, puentes termicos y facturas)")
+    # 5. Calculo de sombras estacionales en huecos
+    sh = calcular_sombras_estacionales_hueco(orientacion="Sur", ancho_hueco_m=1.20, alto_hueco_m=1.40, retranqueo_m=0.15, vuelo_voladizo_m=0.60)
+    assert sh["valido"] is True
+    assert sh["factor_sombra_verano"] < 0.80
+
+    # 6. Perfil de tecnico colegiado persistente
+    p = guardar_perfil_tecnico(nombre_tecnico="Jose Manuel Caamaño González", nif_tecnico="00000000Z", titulacion="Arquitecto Técnico")
+    assert p["valido"] is True
+    assert p["perfil"]["titulacion"] == "Arquitecto Técnico"
+
+    print("[PASS] test_trials_and_tests (visita oficial, blower door, puentes termicos, facturas, sombras y perfil tecnico)")
 
 
 if __name__ == "__main__":

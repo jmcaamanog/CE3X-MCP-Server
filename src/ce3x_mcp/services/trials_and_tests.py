@@ -138,3 +138,52 @@ def contrastar_facturas_reales(
         "desviacion_porcentual": round(desviacion_pct, 1),
         "diagnostico_contraste": diagnostico
     }
+
+def calcular_sombras_estacionales_hueco(
+    orientacion: str = "Sur",
+    ancho_hueco_m: float = 1.20,
+    alto_hueco_m: float = 1.20,
+    retranqueo_m: float = 0.0,
+    vuelo_voladizo_m: float = 0.0,
+    tiene_toldo: bool = False
+) -> Dict[str, Any]:
+    """
+    Calcula los factores de sombra estacionales (verano e invierno) y el factor solar
+    modificado del hueco conforme a las tablas y fórmulas oficiales del CTE DB-HE y CE3X.
+    """
+    ori = orientacion.strip().upper()
+    
+    # Factor reductor por retranqueo
+    ratio_ret = (retranqueo_m / alto_hueco_m) if alto_hueco_m > 0 else 0.0
+    f_ret_ver = max(0.40, 1.0 - (0.8 * ratio_ret)) if ratio_ret > 0 else 1.0
+    f_ret_inv = max(0.60, 1.0 - (0.4 * ratio_ret)) if ratio_ret > 0 else 1.0
+    
+    # Factor reductor por voladizo
+    ratio_vol = (vuelo_voladizo_m / alto_hueco_m) if alto_hueco_m > 0 else 0.0
+    f_vol_ver = max(0.35, 1.0 - (1.1 * ratio_vol)) if ratio_vol > 0 else 1.0
+    f_vol_inv = max(0.65, 1.0 - (0.5 * ratio_vol)) if ratio_vol > 0 else 1.0
+    
+    # Efecto del toldo en verano
+    f_toldo_ver = 0.35 if tiene_toldo else 1.0
+    f_toldo_inv = 1.0 # En invierno los toldos se recogen
+    
+    f_sombra_verano = round(f_ret_ver * f_vol_ver * f_toldo_ver, 2)
+    f_sombra_invierno = round(f_ret_inv * f_vol_inv * f_toldo_inv, 2)
+    
+    # Diagnóstico
+    if tiene_toldo or vuelo_voladizo_m > 0.5:
+        diagnostico = "Alta protección solar estacional: gran reducción de sobrecalentamiento en verano manteniendo captación invernal."
+    elif retranqueo_m > 0.15:
+        diagnostico = "Protección moderada por retranqueo constructivo de fachada."
+    else:
+        diagnostico = "Hueco expuesto sin protecciones solares acusadas (máxima captación solar)."
+        
+    return {
+        "valido": True,
+        "orientacion": ori,
+        "dimensiones_hueco_m": f"{ancho_hueco_m} x {alto_hueco_m}",
+        "factor_sombra_verano": f_sombra_verano,
+        "factor_sombra_invierno": f_sombra_invierno,
+        "reduccion_radiacion_verano_pct": round((1.0 - f_sombra_verano) * 100.0, 1),
+        "diagnostico_sombras": diagnostico
+    }

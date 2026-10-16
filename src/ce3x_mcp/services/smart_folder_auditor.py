@@ -25,6 +25,7 @@ from ce3x_mcp.services.xml_builder import generar_xml_oficial_30
 from ce3x_mcp.services.pdf_compiler import compilar_pdf_desde_xml
 from ce3x_mcp.services.improvement_engine import calcular_paquetes_medidas_mejora
 from ce3x_mcp.services.nextgen_report import generar_informe_justificativo_nextgen
+from ce3x_mcp.services.technician_profile import obtener_perfil_tecnico
 from ce3x_mcp.core.models import (
     ProyectoCertificacion,
     DatosAdministrativos,
@@ -509,6 +510,8 @@ def certificar_inmueble_desde_carpeta(
         tipo_acs=acs
     )
 
+    perfil = obtener_perfil_tecnico()
+
     # 2. Generar Archivo CEX Nativo para CE3X
     cex_path = os.path.join(out_dir, "Proyecto_CE3X.cex")
     guardar_fichero_cex_completo(
@@ -521,7 +524,12 @@ def certificar_inmueble_desde_carpeta(
         ano_construccion=ano,
         superficie_util=sup,
         zona_climatica=zona,
-        referencia_catastral=rc
+        referencia_catastral=rc,
+        nombre_tecnico=perfil["nombre_tecnico"],
+        nif_tecnico=perfil["nif_tecnico"],
+        titulacion=perfil["titulacion"],
+        razon_social=perfil["razon_social"],
+        comunidad_autonoma=perfil["comunidad_autonoma"]
     )
 
     # 3. Generar Archivo XML Oficial 3.0
@@ -531,7 +539,12 @@ def certificar_inmueble_desde_carpeta(
         municipio=municipio,
         provincia=provincia,
         codigo_postal=codigo_postal,
-        referencia_catastral=rc
+        referencia_catastral=rc,
+        nombre_tecnico=perfil["nombre_tecnico"],
+        nif_tecnico=perfil["nif_tecnico"],
+        titulacion_tecnico=perfil["titulacion"],
+        razon_social=perfil["razon_social"],
+        comunidad_autonoma=perfil["comunidad_autonoma"]
     )
     gen = DatosGenerales(
         ano_construccion=ano,

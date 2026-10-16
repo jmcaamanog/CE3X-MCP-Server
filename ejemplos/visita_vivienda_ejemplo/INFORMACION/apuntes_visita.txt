@@ -1,0 +1,21 @@
+VISITA TÉCNICA Y TOMA DE DATOS - CERTIFICACIÓN ENERGÉTICA
+Fecha de visita: 16/10/2026
+Inmueble: Piso 3ºD en Rúa Real 15, A Coruña (CP: 15001)
+Referencia Catastral: 2344201XK3724S0001LD
+Año de construcción: 1982 (Normativa NBE-CT-79)
+Superficie útil medida in situ: 88.50 m2 | Altura libre: 2.60 m
+
+Envolvente térmica observada:
+- Fachada principal orientada al Sur, fábrica de doble hoja de ladrillo con cámara de aire.
+- Huecos: Ventanas de aluminio con rotura de puente térmico (RPT 12mm) y doble vidrio bajo emisivo 4/12/4.
+- Voladizo de alero superior en cubierta de 0.60 m de vuelo sobre las ventanas del último piso.
+
+Instalaciones térmicas:
+- Calefacción: Caldera mural individual de condensación Saunier Duval Thema Condens 25kW a gas natural.
+- Agua Caliente Sanitaria (ACS): Termo eléctrico mural de 80 litros (1.5 kW).
+
+Pruebas e inspecciones realizadas:
+- Inspección visual exhaustiva de cerramientos y carpinterías.
+- Medición dimensional in situ con distanciómetro láser.
+- Comprobación de placa de características de la caldera y termo.
+- Cotejo documental con la Sede Electrónica del Catastro.

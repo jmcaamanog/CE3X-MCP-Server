@@ -55,8 +55,10 @@ from ce3x_mcp.services.trials_and_tests import (
     registrar_visita_e_inspeccion,
     registrar_ensayo_blower_door,
     calcular_puentes_termicos_cte,
-    contrastar_facturas_reales
+    contrastar_facturas_reales,
+    calcular_sombras_estacionales_hueco
 )
+from ce3x_mcp.services.technician_profile import guardar_perfil_tecnico, obtener_perfil_tecnico
 from ce3x_mcp.services.smart_folder_auditor import auditar_carpeta_inmueble, certificar_inmueble_desde_carpeta, organizar_carpeta_visita as organizar_carpeta_visita_impl
 from ce3x_mcp.services.libraries import (
     CATALOGO_MUROS_FACHADA,
@@ -527,6 +529,53 @@ def calcular_puentes_termicos(
         perimetro_forjado_m=perimetro_forjado_m,
         perimetro_huecos_m=perimetro_huecos_m,
         longitud_pilares_m=longitud_pilares_m
+    )
+
+@mcp.tool()
+def configurar_perfil_tecnico_colegiado(
+    nombre_tecnico: str,
+    nif_tecnico: str,
+    titulacion: str = "Arquitecto Técnico",
+    colegio_profesional: Optional[str] = None,
+    numero_colegiado: Optional[str] = None,
+    razon_social: Optional[str] = None,
+    comunidad_autonoma: str = "Galicia"
+) -> Dict[str, Any]:
+    """
+    Configura y guarda de forma persistente los datos colegiales del técnico certificador.
+    Se inyectarán automáticamente en todos los proyectos .cex, archivos XML oficiales v3.0
+    y documentos PDF generados.
+    """
+    return guardar_perfil_tecnico(
+        nombre_tecnico=nombre_tecnico,
+        nif_tecnico=nif_tecnico,
+        titulacion=titulacion,
+        colegio_profesional=colegio_profesional,
+        numero_colegiado=numero_colegiado,
+        razon_social=razon_social,
+        comunidad_autonoma=comunidad_autonoma
+    )
+
+@mcp.tool()
+def calcular_sombras_hueco(
+    orientacion: str = "Sur",
+    ancho_hueco_m: float = 1.20,
+    alto_hueco_m: float = 1.20,
+    retranqueo_m: float = 0.0,
+    vuelo_voladizo_m: float = 0.0,
+    tiene_toldo: bool = False
+) -> Dict[str, Any]:
+    """
+    Calcula los factores de sombra estacionales (verano e invierno) y el factor solar modificado
+    de un hueco por voladizo, retranqueo o toldo, conforme al CTE DB-HE y CE3X.
+    """
+    return calcular_sombras_estacionales_hueco(
+        orientacion=orientacion,
+        ancho_hueco_m=ancho_hueco_m,
+        alto_hueco_m=alto_hueco_m,
+        retranqueo_m=retranqueo_m,
+        vuelo_voladizo_m=vuelo_voladizo_m,
+        tiene_toldo=tiene_toldo
     )
 
 @mcp.tool()

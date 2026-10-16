@@ -43,7 +43,9 @@ def guardar_fichero_cex_completo(
     referencia_catastral: str = "2344201XK3724S0001LD",
     nombre_tecnico: str = "Tecnico Certificador Colegiado",
     nif_tecnico: str = "00000000T",
-    titulacion: str = "Arquitectura tecnica o aparejadores"
+    titulacion: str = "Arquitectura tecnica o aparejadores",
+    razon_social: Optional[str] = None,
+    comunidad_autonoma: Optional[str] = None
 ):
     """
     Genera un archivo de proyecto .cex 100% compatible con la interfaz grafica de CE3X v3.2.
