@@ -51,6 +51,12 @@ from ce3x_mcp.services.improvement_engine import calcular_paquetes_medidas_mejor
 from ce3x_mcp.services.pvgis_client import calcular_produccion_solar_pvgis
 from ce3x_mcp.services.nextgen_report import generar_informe_justificativo_nextgen
 from ce3x_mcp.services.plan_parser import analizar_plano_distribucion_pdf
+from ce3x_mcp.services.trials_and_tests import (
+    registrar_visita_e_inspeccion,
+    registrar_ensayo_blower_door,
+    calcular_puentes_termicos_cte,
+    contrastar_facturas_reales
+)
 from ce3x_mcp.services.smart_folder_auditor import auditar_carpeta_inmueble, certificar_inmueble_desde_carpeta, organizar_carpeta_visita as organizar_carpeta_visita_impl
 from ce3x_mcp.services.libraries import (
     CATALOGO_MUROS_FACHADA,
@@ -467,6 +473,79 @@ def certificar_desde_carpeta_visita(
         tipo_calefaccion=tipo_calefaccion,
         tipo_acs=tipo_acs,
         nombre_edificio=nombre_edificio
+    )
+
+@mcp.tool()
+def registrar_visita_presencial(
+    fecha_visita: str,
+    pruebas_realizadas: Optional[List[str]] = None,
+    observaciones_tecnicas: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Registra formalmente la visita presencial obligatoria exigida por el Art. 8 del RD 390/2021
+    y genera el bloque documental oficial para el Anexo IV del Certificado de Eficiencia Energética.
+    Pruebas disponibles: inspeccion_visual, medicion_laser, comprobacion_placas, termografia,
+    ensayo_blower_door, facturas_electricas.
+    """
+    return registrar_visita_e_inspeccion(
+        fecha_visita=fecha_visita,
+        pruebas_realizadas=pruebas_realizadas,
+        observaciones_tecnicas=observaciones_tecnicas
+    )
+
+@mcp.tool()
+def registrar_ensayo_estanqueidad_blower_door(
+    volumen_neto_m3: float,
+    superficie_envolvente_m2: float,
+    caudal_50pa_m3h: float
+) -> Dict[str, Any]:
+    """
+    Procesa un ensayo de estanqueidad al aire según norma UNE-EN ISO 9972 (Blower Door).
+    Calcula el valor n50 (ren/h a 50 Pa), q50 (m3/h·m2), la tasa de infiltración equivalente
+    para el motor CE3X y emite el diagnóstico de hermeticidad (Passivhaus / CTE DB-HE 2019).
+    """
+    return registrar_ensayo_blower_door(
+        volumen_neto_m3=volumen_neto_m3,
+        superficie_envolvente_m2=superficie_envolvente_m2,
+        caudal_50pa_m3h=caudal_50pa_m3h
+    )
+
+@mcp.tool()
+def calcular_puentes_termicos(
+    ano_construccion: int,
+    perimetro_forjado_m: float,
+    perimetro_huecos_m: float,
+    longitud_pilares_m: float = 0.0
+) -> Dict[str, Any]:
+    """
+    Calcula las transmitancias térmicas lineales (psi en W/m·K) y la pérdida térmica global (W/K)
+    asociada a puentes térmicos en frentes de forjado, jambas, dinteles, alféizares y pilares
+    según el catálogo oficial del Documento de Apoyo CTE (DA DB-HE / 3).
+    """
+    return calcular_puentes_termicos_cte(
+        ano_construccion=ano_construccion,
+        perimetro_forjado_m=perimetro_forjado_m,
+        perimetro_huecos_m=perimetro_huecos_m,
+        longitud_pilares_m=longitud_pilares_m
+    )
+
+@mcp.tool()
+def contrastar_consumo_facturas_reales(
+    consumo_teorico_kwh_ano: float,
+    electricidad_real_kwh: float,
+    gas_natural_real_kwh: float = 0.0,
+    gasoleo_real_litros: float = 0.0
+) -> Dict[str, Any]:
+    """
+    Compara el consumo real de energía de los últimos 12 meses (electricidad, gas natural o gasóleo)
+    frente a la demanda teórica calculada en el modelo de CE3X, detectando desviaciones de uso
+    y hábitos de confort del usuario.
+    """
+    return contrastar_facturas_reales(
+        consumo_teorico_kwh_ano=consumo_teorico_kwh_ano,
+        electricidad_real_kwh=electricidad_real_kwh,
+        gas_natural_real_kwh=gas_natural_real_kwh,
+        gasoleo_real_litros=gasoleo_real_litros
     )
 
 @mcp.resource("ce3x://librerias/catalogo_soluciones_constructivas")

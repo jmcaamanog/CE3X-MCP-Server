@@ -11,6 +11,12 @@ from ce3x_mcp.services.equipment_parser import analizar_datos_equipo_climatizaci
 from ce3x_mcp.services.improvement_engine import calcular_paquetes_medidas_mejora
 from ce3x_mcp.services.pvgis_client import calcular_produccion_solar_pvgis
 from ce3x_mcp.services.smart_folder_auditor import auditar_carpeta_inmueble, certificar_inmueble_desde_carpeta, organizar_carpeta_visita
+from ce3x_mcp.services.trials_and_tests import (
+    registrar_visita_e_inspeccion,
+    registrar_ensayo_blower_door,
+    calcular_puentes_termicos_cte,
+    contrastar_facturas_reales
+)
 from ce3x_mcp.services.libraries import inferir_solucion_envolvente_por_ano, CATALOGO_VIDRIOS
 from ce3x_mcp.services.nextgen_report import generar_informe_justificativo_nextgen
 from ce3x_mcp.services.plan_parser import analizar_plano_distribucion_pdf
@@ -153,6 +159,33 @@ def test_smart_folder_auditor():
         print("[PASS] test_smart_folder_auditor, organizar_carpeta_visita y entregables en CERTIFICADO/")
 
 
+def test_trials_and_tests():
+    # 1. Visita e inspeccion oficial (Anexo IV RD 390/2021)
+    v = registrar_visita_e_inspeccion("16/10/2026", ["inspeccion_visual", "medicion_laser", "termografia"])
+    assert v["valido"] is True
+    assert v["cumple_rd390_visita_presencial"] is True
+    assert "termográfica" in v["texto_anexo_iv"]
+
+    # 2. Ensayo Blower Door (UNE-EN ISO 9972)
+    bd = registrar_ensayo_blower_door(volumen_neto_m3=240.0, superficie_envolvente_m2=210.0, caudal_50pa_m3h=480.0)
+    assert bd["valido"] is True
+    assert bd["n50_ren_h"] == 2.0
+    assert "Conforme" in bd["diagnostico_hermeticidad"]
+
+    # 3. Puentes termicos CTE (DA DB-HE / 3)
+    pt = calcular_puentes_termicos_cte(ano_construccion=1995, perimetro_forjado_m=35.0, perimetro_huecos_m=28.0)
+    assert pt["valido"] is True
+    assert pt["perdida_total_puentes_termicos_w_k"] > 20.0
+
+    # 4. Contraste de facturas reales vs modelo
+    cf = contrastar_facturas_reales(consumo_teorico_kwh_ano=6500.0, electricidad_real_kwh=3200.0, gas_natural_real_kwh=3100.0)
+    assert cf["valido"] is True
+    assert abs(cf["desviacion_porcentual"]) < 5.0
+    assert "Alineado" in cf["diagnostico_contraste"]
+
+    print("[PASS] test_trials_and_tests (visita oficial, blower door, puentes termicos y facturas)")
+
+
 if __name__ == "__main__":
     test_libraries()
     test_smart_folder_auditor()
@@ -161,5 +194,6 @@ if __name__ == "__main__":
     test_equipment_parser()
     test_improvement_engine_and_nextgen()
     test_pvgis()
+    test_trials_and_tests()
     print("\nTODOS LOS TESTS UNITARIOS Y DE INTEGRACIÓN HAN PASADO EXITOSAMENTE (100%)!")
 

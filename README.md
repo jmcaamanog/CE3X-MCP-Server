@@ -13,11 +13,15 @@
 
 | 🌟 Recurso | 🚀 Acción / Enlace | 📝 Descripción |
 | :--- | :--- | :--- |
-| **Estudio de Conectores** | 🌐 **[Ver Estudio Integral de Conexiones](./docs/ESTUDIO_INTEGRAL_CONECTORES_CE3X_MCP.md)** | Mapeo pantalla a pantalla y botón a botón de CE3X a conectores de IA. |
+| **Estructura de Visita** | 📁 **[Ver Guía 5 Carpetas](./docs/ESTRUCTURA_CARPETA_VISITA.md)** | Arquitectura canónica para organizar fotos, planos, notas y certificados. |
+| **Estudio de Conectores** | 🌐 **[Ver Estudio Integral de Conexiones](./docs/ESTUDIO_INTEGRAL_CONECTORES_CE3X_MCP.md)** | Mapeo pantalla a pantalla, botón a botón y ensayos de CE3X a conectores de IA. |
 | **Documento de Análisis** | 📄 **[Ver Análisis CE3X & MCP](./docs/analisis_ce3x_mcp_framework.md)** | Análisis exhaustivo del software, manuales técnicos y arquitectura modular. |
 | **Plantilla de Campo** | 📋 **[Ver Plantilla de Toma de Datos](./docs/PLANTILLA_TOMA_DATOS_CEE.md)** | Formulario estructurado para visitas de campo y dictado por voz. |
-| **Guía para tu IA** | 🧠 **[Ver Instrucciones para la IA](./docs/GUIA_PROMPTS_Y_INSTRUCCIONES_IA.md)** | System prompts y protocolo en 4 pasos para Claude, Gemini y Cursor. |
+| **Guía para tu IA** | 🧠 **[Ver Instrucciones para la IA](./docs/GUIA_PROMPTS_Y_INSTRUCCIONES_IA.md)** | System prompts y protocolo de primer contacto para Claude, Gemini y Cursor. |
 | **Historial de Versiones** | 📜 **[Ver Changelog](./CHANGELOG.md)** | Registro detallado de versiones y mejoras implementadas. |
+| **Código de Conducta** | 🤝 **[Ver Código de Conducta](./CODE_OF_CONDUCT.md)** | El manual del buen rollo y convivencia comunitaria. |
+| **Guía de Contribución** | 🛠️ **[Ver Cómo Contribuir](./CONTRIBUTING.md)** | Pautas para reportar bugs, proponer ideas y enviar Pull Requests. |
+| **Seguridad** | 🛡️ **[Ver Política de Seguridad](./SECURITY.md)** | Divulgación responsable y reporte de vulnerabilidades. |
 | **Repositorio GitHub** | 💻 **[GitHub jmcaamanog](https://github.com/jmcaamanog/CE3X-MCP-Server)** | Código fuente, issues y lanzamientos oficiales. |
 
 ---
@@ -33,7 +37,7 @@
 ---
 
 > [!IMPORTANT]
-> **🚀 Integración Instantánea en 1 Clic:** No necesitas compilar ni clonar nada si usas `uvx`. Copia y pega el bloque JSON correspondiente en tu cliente de IA (Claude Desktop, Cursor, Antigravity IDE o VS Code) y dispondrás de 11 herramientas oficiales en tu chat al instante.
+> **🚀 Integración Instantánea en 1 Clic:** No necesitas compilar ni clonar nada si usas `uvx`. Copia y pega el bloque JSON correspondiente en tu cliente de IA (Claude Desktop, Cursor, Antigravity IDE o VS Code) y dispondrás de 18 herramientas oficiales en tu chat al instante.
 
 ---
 
@@ -138,21 +142,39 @@ Y en tu archivo de configuración MCP indicas el intérprete local:
 
 ---
 
-## 🛠️ Catálogo de Herramientas MCP Disponibles
+## 🛠️ Catálogo Completo de 18 Herramientas MCP Disponibles
 
-Una vez conectado, cualquier usuario puede solicitar a su modelo de lenguaje acciones como:
+El servidor implementa el mapeo total y exhaustivo de CE3X v3.2, manuales técnicos y normativas oficiales:
 
-1. `consultar_catastro(referencia_catastral)`: Ingesta de datos de catastro en un solo clic.
-2. `determinar_zona_climatica(provincia, municipio, altitud)`: Clima reglamentario CTE DB-HE.
-3. `estimar_envolvente_por_defecto(ano_construccion, zona_climatica, superficie_util)`: Transmitancias térmicas oficiales según la antigüedad del inmueble.
-4. `calcular_calificacion_energetica(proyecto)`: Demandas, consumos, emisiones y letra global (A a G).
-5. `analizar_modelo_bim_ifc(ifc_path)`: Extracción geométrica de envolvente térmica desde modelos BIM.
-6. `analizar_plano_arquitectura_pdf(pdf_path)`: Reconocimiento inteligente de recintos, superficies y carpinterías.
-7. `analizar_ficha_equipo_clima(texto_o_ficha)`: Lectura de potencias y rendimientos estacionales (SCOP/COP).
-8. `calcular_produccion_fotovoltaica_pvgis(latitud, longitud, potencia_kwp)`: Simulación solar satelital real.
-9. `proponer_medidas_mejora_rd390(...)`: Generación de los 3 paquetes oficiales de rehabilitación.
-10. `emitir_dictamen_subvenciones_nextgen(...)`: Certificación de ahorros RD 853/2021 y deducción fiscal IRPF.
-11. `generar_certificado_completo(...)`: Pipeline integral que emite el archivo `.cex`, el XML oficial v3.0 y el PDF de 15 páginas.
+### 🏛️ Datos Administrativos, Catastro y Clima
+1. `consultar_catastro(referencia_catastral)`: Ingesta telemática en tiempo real desde la Sede Electrónica de Catastro.
+2. `determinar_zona_climatica(provincia, municipio, altitud)`: Clima oficial de referencia CTE DB-HE con corrección por cota.
+3. `registrar_visita_presencial(fecha_visita, pruebas, observaciones)`: Registro formal in situ para el Anexo IV obligatorio (RD 390/2021 Art. 8).
+
+### 📐 Envolvente Térmica, BIM y Planos
+4. `estimar_envolvente_por_defecto(ano_construccion, zona, superficie)`: Transmitancias U históricas (Pre-79, NBE-CT-79, CTE).
+5. `analizar_modelo_bim_ifc(ifc_path)`: Cubicación paramétrica de muros, cubiertas y huecos desde modelos IFC (IfcOpenShell).
+6. `analizar_plano_arquitectura_pdf(pdf_path)`: Extracción inteligente de superficies y carpinterías desde planos en PDF.
+7. `calcular_puentes_termicos(ano, perimetro_forjado, perimetro_huecos, pilares)`: Transmitancias lineales psi (W/m·K) según DA DB-HE / 3.
+
+### ⚙️ Instalaciones, Equipos y Renovables
+8. `analizar_ficha_equipo_clima(texto_o_ficha)`: Lectura de bombas de calor, calderas, potencias y SCOP/COP.
+9. `calcular_produccion_fotovoltaica_pvgis(lat, lon, kwp)`: Simulación satelital en tiempo real con datos de la Comisión Europea.
+
+### 🧪 Ensayos Oficiales y Contraste de Consumos
+10. `registrar_ensayo_estanqueidad_blower_door(volumen, superficie, caudal_50pa)`: Ensayo Blower Door (UNE-EN ISO 9972) con cálculo de n50 y q50.
+11. `contrastar_consumo_facturas_reales(consumo_teorico, electricidad, gas, gasoleo)`: Contraste de facturación real vs modelo normativo.
+
+### 💡 Rehabilitación y Subvenciones Públicas
+12. `proponer_medidas_mejora_rd390(...)`: Generación de paquetes de envolvente, equipos e hibridación con fotovoltaica.
+13. `emitir_dictamen_subvenciones_nextgen(...)`: Dictamen técnico oficial con tramos del 40%, 65%, 80% (RD 853/2021) e IRPF.
+
+### 📂 Gestión Integral de Carpeta de Visita y Entregables
+14. `organizar_carpeta_visita(ruta_carpeta)`: Auto-organizador inteligente en 5 carpetas (INFORMACION, PLANOS, FOTOS, INSTALACIONES, CERTIFICADO).
+15. `auditar_carpeta_visita(ruta_carpeta)`: Escaneo autónomo multimodal de la visita y generación de preguntas quirúrgicas.
+16. `certificar_desde_carpeta_visita(ruta_carpeta, ...)`: Ciclo completo que genera todos los entregables en `CERTIFICADO/`.
+17. `calcular_calificacion_energetica(proyecto)`: Motor de cálculo simplificado de demandas, consumos y emisiones.
+18. `generar_certificado_completo(...)`: Pipeline integral que emite el `.cex` nativo, XML oficial v3.0 y PDF de 15 páginas.
 
 ---
 
