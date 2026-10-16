@@ -374,9 +374,10 @@ def generar_certificado_completo(
         ano_construccion=ano_construccion,
         superficie_util=superficie_util,
         zona_climatica=zona,
-        nombre_tecnico="Técnico Certificador Colegiado",
+        referencia_catastral=referencia_catastral or "",
+        nombre_tecnico="Tecnico Certificador Colegiado",
         nif_tecnico="00000000T",
-        titulacion="Arquitectura técnica o aparejadores"
+        titulacion="Arquitectura tecnica o aparejadores"
     )
     
     return {
