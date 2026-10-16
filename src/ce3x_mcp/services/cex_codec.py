@@ -60,6 +60,7 @@ def guardar_fichero_cex_completo(
     ano_construccion: int,
     superficie_util: float,
     zona_climatica: str,
+    referencia_catastral: str = "",
     nombre_tecnico: str = "Tecnico Certificador Colegiado",
     nif_tecnico: str = "00000000T",
     titulacion: str = "Arquitectura tecnica o aparejadores"
@@ -68,7 +69,8 @@ def guardar_fichero_cex_completo(
     Genera un archivo de proyecto .cex 100% compatible con la interfaz grafica de CE3X v3.2.
     Utiliza mutacion in-place a nivel de byte sobre la plantilla oficial de CE3X,
     preservando intactos todos los opcodes originales de Python 2.7 y las clases internas de wxPython.
-    Aplica normalizacion automatica de provincias para evitar bloqueos en wx.Choice.
+    Aplica normalizacion automatica de provincias y actualiza la referencia catastral
+    segun el regimen foral o comun para superar las validaciones de CE3X.
     """
     if not os.path.exists(TEMPLATE_CEX_PATH):
         raise FileNotFoundError(f"Plantilla base CE3X no encontrada en {TEMPLATE_CEX_PATH}")
@@ -80,23 +82,29 @@ def guardar_fichero_cex_completo(
     provincia_ce3x = normalizar_provincia_ce3x(provincia)
     municipio_ce3x = municipio.strip()
     
+    # Tratamiento de catastro: en territorio comun debe ser 20 caracteres o vacio
+    # La plantilla original contiene una referencia foral navarra de 29 caracteres
+    catastro_bytes = f"V{referencia_catastral.strip()}\r\n".encode("latin1", errors="ignore")
+    
     subs = [
         # 1. Nombre del edificio
         (b"VEjemplo2-Vivienda perteneciente a un bloque de viviendas\r\n", f"V{nombre_edificio}\r\n".encode("latin1", errors="ignore")),
         # 2. Direccion
         (b"Vc/ Elizmendi 28, 7\xbaA\r\n", f"V{direccion}\r\n".encode("latin1", errors="ignore")),
-        # 3. Localidad / Municipio (sin espacio)
+        # 3. Localidad / Municipio
         (b"VPamplona\r\n", f"V{municipio_ce3x}\r\n".encode("latin1", errors="ignore")),
-        # 4. Provincia (con espacio si es homonima)
+        # 4. Provincia
         (b"VNavarra\r\n", f"V{provincia_ce3x}\r\n".encode("latin1", errors="ignore")),
         # 5. Codigo postal
         (b"V31001\r\n", f"V{codigo_postal}\r\n".encode("latin1", errors="ignore")),
         (b"V31002\r\n", f"V{codigo_postal}\r\n".encode("latin1", errors="ignore")),
-        # 6. Datos del tecnico
+        # 6. Referencia catastral (reemplazo de los 29 chars forales de Navarra)
+        (b"V131050090310000000001550820MA\r\n", catastro_bytes),
+        # 7. Datos del tecnico
         (b"VRoberto V\xe1zque de la Torre\r\n", f"V{nombre_tecnico}\r\n".encode("latin1", errors="ignore")),
         (b"VCENER - EFINOVATIC\r\n", b"VEstudio Tecnico\r\n"),
         (b"Vinfo@efinovatic.es\r\n", b"Vtecnico@certificacion.es\r\n"),
-        # 7. Zona climatica
+        # 8. Zona climatica
         (b"aVD1\r\n", f"aV{zona_climatica}\r\n".encode("latin1", errors="ignore")),
     ]
     
