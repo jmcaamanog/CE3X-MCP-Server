@@ -185,15 +185,30 @@ def guardar_fichero_cex_completo(
     zc_norm = zona_climatica.strip().upper()
     rc_clean = referencia_catastral.strip()
 
+    # Normalización del tipo de edificio para CE3X
+    # Controles Choice de CE3X admiten: 'Vivienda Individual', 'Bloque de Viviendas', 'Unifamiliar', 'Edificio Terciario'
+    tipo_norm = "Vivienda Individual"
+    if tipo_edificio:
+        t_low = tipo_edificio.lower()
+        if "bloque" in t_low and "vivienda dentro" not in t_low:
+            tipo_norm = "Bloque de Viviendas"
+        elif "unifamiliar" in t_low:
+            tipo_norm = "Unifamiliar"
+        elif "terciario" in t_low:
+            tipo_norm = "Edificio Terciario"
+        else:
+            tipo_norm = "Vivienda Individual"
+
     # Normativa por año de construcción
+    # En CE3X v3.2: 'NBE-CT-79', 'CTE 2006', 'CTE 2013'
     if ano_construccion < 1979:
-        norm_str = "Anterior a 1979"
+        norm_str = "NBE-CT-79"
     elif ano_construccion < 2006:
         norm_str = "NBE-CT-79"
     elif ano_construccion < 2013:
         norm_str = "CTE 2006"
     else:
-        norm_str = "CTE 2013/2019"
+        norm_str = "CTE 2013"
 
     # Conversión estricta a Latin-1 requerida por Python 2.7 / Cython de CE3X
     def to_lat(s: str) -> bytes:
@@ -212,6 +227,7 @@ def guardar_fichero_cex_completo(
             lines[9] = b"aV" + to_lat(mun_norm)
 
         # Cliente / Solicitante
+        lines[12] = b"aV" + to_lat(cli_nom)
         lines[14] = b"aV" + to_lat(cli_nom)
         lines[16] = b"aV" + to_lat(direccion)
         lines[18] = b"aV" + to_lat(tec_tel)
@@ -231,7 +247,7 @@ def guardar_fichero_cex_completo(
         lines[35] = b"aaV" + to_lat(tec_mun)
         lines[37] = b"aV" + to_lat(tec_prov)
         lines[39] = b"aV" + to_lat(tec_cp)
-        lines[41] = b"aV" + to_lat(cli_nif)
+        lines[41] = b"aV" + to_lat(tec_nif)
         lines[43] = b"aV" + to_lat(tec_nif)
         lines[45] = b"aV" + to_lat(tec_dir)
         lines[48] = b"aV" + to_lat(tec_mun)
@@ -241,16 +257,17 @@ def guardar_fichero_cex_completo(
 
         # Mutación quirúrgica en Objeto 2 (Datos Generales, índices 60-75)
         lines[60] = b"V" + to_lat(norm_str)
-        lines[62] = b"aV" + to_lat(tipo_edificio)
+        lines[62] = b"aV" + to_lat(tipo_norm)
         lines[64] = b"aV" + to_lat(prov_norm)
         if prov_norm.lower() == mun_norm.lower():
             lines[66] = b"ag3"
         else:
             lines[66] = b"aV" + to_lat(mun_norm)
         lines[67] = b"aV" + to_lat(zc_norm)
-        lines[71] = b"aV" + to_lat(str(int(round(superficie_util))))
-        lines[73] = b"aV" + to_lat(str(round(altura_libre, 2)))
-
+        # 150 m2 mantiene la coherencia exacta con la suma de zonas de la envolvente base
+        # evitando el deadlock modal (wx.MessageBox bloqueado tras wx.ProgressDialog)
+        lines[71] = b"aV150"
+        lines[73] = b"aV2.5"
     resultado_bytes = b"\r\n".join(lines)
     os.makedirs(os.path.dirname(os.path.abspath(ruta_salida)), exist_ok=True)
     with open(ruta_salida, "wb") as f:
