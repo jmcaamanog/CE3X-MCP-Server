@@ -15,7 +15,8 @@
 | :--- | :--- | :--- |
 | **Estudio de Conectores** | 🌐 **[Ver Estudio Integral de Conexiones](./docs/ESTUDIO_INTEGRAL_CONECTORES_CE3X_MCP.md)** | Mapeo pantalla a pantalla y botón a botón de CE3X a conectores de IA. |
 | **Documento de Análisis** | 📄 **[Ver Análisis CE3X & MCP](./docs/analisis_ce3x_mcp_framework.md)** | Análisis exhaustivo del software, manuales técnicos y arquitectura modular. |
-| **Entregables de Ejemplo** | 📁 **[Ver Carpeta de Ejemplos Generados](./ejemplos/)** | Archivos .cex, XML oficial v3.0 y PDF de 15 páginas generados en vivo. |
+| **Plantilla de Campo** | 📋 **[Ver Plantilla de Toma de Datos](./docs/PLANTILLA_TOMA_DATOS_CEE.md)** | Formulario estructurado para visitas de campo y dictado por voz. |
+| **Guía para tu IA** | 🧠 **[Ver Instrucciones para la IA](./docs/GUIA_PROMPTS_Y_INSTRUCCIONES_IA.md)** | System prompts y protocolo en 4 pasos para Claude, Gemini y Cursor. |
 | **Historial de Versiones** | 📜 **[Ver Changelog](./CHANGELOG.md)** | Registro detallado de versiones y mejoras implementadas. |
 | **Repositorio GitHub** | 💻 **[GitHub jmcaamanog](https://github.com/jmcaamanog/CE3X-MCP-Server)** | Código fuente, issues y lanzamientos oficiales. |
 
@@ -155,14 +156,7 @@ Una vez conectado, cualquier usuario puede solicitar a su modelo de lenguaje acc
 
 ---
 
-## 📁 Entregables de Prueba Incluidos en el Repositorio
 
-En la carpeta [`ejemplos/`](./ejemplos/) encontrarás los entregables generados durante las pruebas oficiales de certificación:
-* **[`Proyecto_Vivienda_Coruna_1985.cex`](./ejemplos/Proyecto_Vivienda_Coruna_1985.cex)**: Proyecto nativo editable en CE3X v3.2.
-* **[`Certificado_Oficial_Coruna_1985.xml`](./ejemplos/Certificado_Oficial_Coruna_1985.xml)**: XML ministerial validado con `xmlcheck.exe`.
-* **[`Certificado_Oficial_Coruna_1985.pdf`](./ejemplos/Certificado_Oficial_Coruna_1985.pdf)**: Certificado de Eficiencia Energética oficial de 15 páginas.
-
----
 
 ## 👨‍💻 Autor y Dirección Técnica
 

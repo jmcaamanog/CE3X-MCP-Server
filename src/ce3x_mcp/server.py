@@ -44,7 +44,7 @@ from ce3x_mcp.services.cte_climate import (
 )
 from ce3x_mcp.services.xml_builder import generar_xml_oficial_30
 from ce3x_mcp.services.pdf_compiler import compilar_pdf_desde_xml
-from ce3x_mcp.services.cex_codec import guardar_fichero_cex_basico
+from ce3x_mcp.services.cex_codec import guardar_fichero_cex_completo
 from ce3x_mcp.services.bim_parser import extraer_envolvente_desde_ifc
 from ce3x_mcp.services.equipment_parser import analizar_datos_equipo_climatizacion
 from ce3x_mcp.services.improvement_engine import calcular_paquetes_medidas_mejora
@@ -362,11 +362,22 @@ def generar_certificado_completo(
     # 2. Compilar PDF Oficial
     pdf_ok, pdf_res = compilar_pdf_desde_xml(xml_path, out_dir)
     
-    # 3. Exportar .CEX nativo
+    # 3. Exportar .CEX nativo completo y compatible con la interfaz CE3X
     cex_path = os.path.join(out_dir, f"Proyecto_{municipio}_{ano_construccion}.cex")
-    admin_list = [nombre_edificio, direccion, municipio, provincia, "", "", adm.nombre_tecnico, direccion, "900000000", "tecnico@ce3x.es", "ESTUDIO JMC", "JMC", "900000000", "info@jmc.es", codigo_postal, []]
-    gen_list = ["Anterior" if ano_construccion < 1979 else "NBE-CT-79", "Vivienda en bloque", municipio, provincia, zona, str(superficie_util), "2.60", "1", "1", "Media", "0.63"]
-    guardar_fichero_cex_basico(cex_path, "CE3Xv3.2 Residencial", admin_list, gen_list, [], [])
+    guardar_fichero_cex_completo(
+        ruta_salida=cex_path,
+        nombre_edificio=nombre_edificio,
+        direccion=direccion,
+        municipio=municipio,
+        provincia=provincia,
+        codigo_postal=codigo_postal,
+        ano_construccion=ano_construccion,
+        superficie_util=superficie_util,
+        zona_climatica=zona,
+        nombre_tecnico="Técnico Certificador Colegiado",
+        nif_tecnico="00000000T",
+        titulacion="Arquitectura técnica o aparejadores"
+    )
     
     return {
         "estado": "completado",
