@@ -21,6 +21,9 @@
 | **Historial de Versiones** | 📜 **[Ver Changelog](./CHANGELOG.md)** | Registro detallado de versiones y mejoras implementadas. |
 | **Código de Conducta** | 🤝 **[Ver Código de Conducta](./CODE_OF_CONDUCT.md)** | El manual del buen rollo y convivencia comunitaria. |
 | **Guía de Contribución** | 🛠️ **[Ver Cómo Contribuir](./CONTRIBUTING.md)** | Pautas para reportar bugs, proponer ideas y enviar Pull Requests. |
+| **Instalador 1-Clic** | 🖱️ **[Ver Instalador Windows](./instalar_en_claude_desktop.bat)** | Script autoejecutable para configurar Claude Desktop y Cursor. |
+| **Skills para Claude/GPT/Gemini** | 🧠 **[Ver Guía de Skills](./docs/GUIA_SKILL_CLAUDE_GPT_GEMINI.md)** | Manual operativo para que cualquier IA razone como un Arquitecto Técnico. |
+| **Notas de Release v1.0** | 📦 **[Ver Release Notes v1.0](./docs/RELEASE_NOTES_v1.0.md)** | Manifiesto de capacidades, paquetes wheel y distribución oficial. |
 | **Seguridad** | 🛡️ **[Ver Política de Seguridad](./SECURITY.md)** | Divulgación responsable y reporte de vulnerabilidades. |
 | **Repositorio GitHub** | 💻 **[GitHub jmcaamanog](https://github.com/jmcaamanog/CE3X-MCP-Server)** | Código fuente, issues y lanzamientos oficiales. |
 
