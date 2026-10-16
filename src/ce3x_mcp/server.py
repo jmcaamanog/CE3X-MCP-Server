@@ -1,4 +1,5 @@
-﻿from fastmcp import FastMCP
+﻿from ce3x_mcp.services.pvgis_client import calcular_produccion_solar_pvgis
+from fastmcp import FastMCP
 from typing import Optional, Dict, Any, List
 import os
 import tempfile
@@ -297,4 +298,19 @@ def main():
 
 if __name__ == "__main__":
     main()
+
+
+@mcp.tool()
+def calcular_produccion_fotovoltaica_pvgis(
+    latitud: float,
+    longitud: float,
+    potencia_pico_kw: float = 3.0,
+    inclinacion_grados: float = 35.0,
+    azimut_grados: float = 0.0
+) -> Dict[str, Any]:
+    """
+    Calcula con precisión científica la producción de energía solar fotovoltaica (kWh/año y mensual)
+    conectando con la API oficial PVGIS de la Comisión Europea (JRC) con radiación satelital SARAH-2.
+    """
+    return calcular_produccion_solar_pvgis(latitud, longitud, potencia_pico_kw, inclinacion_grados, azimut_grados)
 
