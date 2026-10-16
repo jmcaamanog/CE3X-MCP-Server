@@ -11,9 +11,12 @@ class DatosAdministrativos(BaseModel):
     referencia_catastral: Optional[str] = Field(None, description="Referencia catastral (20 caracteres)")
     tipo_alcance: Literal["EdificioCompleto", "ViviendaIndividual", "ParteEdificio"] = "ViviendaIndividual"
     titulacion_tecnico: str = "Arquitecto Técnico"
-    nombre_tecnico: str = "Jose Manuel Caamaño González"
-    nif_tecnico: Optional[str] = "00000000Z"
-    razon_social: Optional[str] = "Estudio Técnico JMC"
+    nombre_tecnico: str = "Técnico Certificador Colegiado"
+    nif_tecnico: Optional[str] = "00000000T"
+    razon_social: Optional[str] = None
+    domicilio_tecnico: Optional[str] = "Despacho Profesional"
+    email_tecnico: Optional[str] = "tecnico@certificador.es"
+    telefono_tecnico: Optional[str] = "900000000"
 
 class DatosGenerales(BaseModel):
     tipologia: Literal["Unifamiliar", "Bloque", "ViviendaBloque", "PequenoTerciario", "GranTerciario"] = "ViviendaBloque"

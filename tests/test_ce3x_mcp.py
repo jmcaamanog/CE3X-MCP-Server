@@ -341,7 +341,53 @@ def test_exhaustive_matrix_scenarios():
     print("[PASS] test_exhaustive_matrix_scenarios (muros, HVAC, orientaciones, sombras, ISO 10077, ACS HE4, puentes termicos, NextGen)")
 
 
+def test_ce3x_verifier_and_rigor():
+    from ce3x_mcp.server import verificar_conexion_ce3x, consultar_catastro, calcular_calificacion_energetica, generar_certificado_completo
+    
+    # 1. Verificar instalación y motores oficiales de CE3X v3.2
+    v = verificar_conexion_ce3x()
+    assert v["instalado"] is True
+    assert v["estado_operativo"] == "OPERATIVO_100_POR_CIENTO"
+    assert v["componentes"]["compilador_pdf_xml2cert"]["existe"] is True
+    assert v["componentes"]["base_escalas_localidades"]["zonas_detectadas"] >= 30
+    
+    # 2. Catastro telemático real sin inventar datos
+    cat = consultar_catastro("2344201XK3724S0001LD")
+    assert cat["valido"] is True
+    assert "ALBARRACIN" in cat["direccion"]
+    assert cat["ano_construccion"] == 1910
+    assert cat["superficie_construida_m2"] == 1522.0
+    
+    # 3. Calificación con escalas oficiales de Localidades.xml
+    calc = calcular_calificacion_energetica(superficie_util=100.0, ano_construccion=1980, zona_climatica="D3", tipo_calefaccion="CalderaCondensacion", tipo_acs="CalderaCondensacion")
+    assert calc["calificacion_global_emisiones"] in ["A", "B", "C", "D", "E", "F", "G"]
+    assert "Escala/Localidades.xml" in calc["escalas_oficiales_ce3x"]["fuente"]
+    
+    # 4. Generación oficial limpia de entregables (.xml, .pdf, .cex)
+    with tempfile.TemporaryDirectory() as tmp_out:
+        res = generar_certificado_completo(
+            nombre_edificio="Edificio Test Rigor",
+            direccion="Plaza Mayor 1",
+            municipio="Albarracin",
+            provincia="Teruel",
+            codigo_postal="44100",
+            superficie_util=120.0,
+            ano_construccion=1980,
+            referencia_catastral="2344201XK3724S0001LD",
+            directorio_salida=tmp_out
+        )
+        assert res["estado"] == "completado"
+        assert os.path.exists(res["archivo_xml_oficial"])
+        assert os.path.exists(res["archivo_pdf_oficial"])
+        assert os.path.exists(res["archivo_cex_ce3x"])
+        assert res["verificacion_rigor"]["datos_inventados"] is False
+        assert res["verificacion_rigor"]["xml_sin_datos_fantasma"] is True
+        
+    print("[PASS] test_ce3x_verifier_and_rigor (CE3X v3.2 oficial, Catastro real, escalas Localidades.xml y XML/PDF/CEX limpios)")
+
+
 if __name__ == "__main__":
+    test_ce3x_verifier_and_rigor()
     test_libraries()
     test_smart_folder_auditor()
     test_cte_climate()

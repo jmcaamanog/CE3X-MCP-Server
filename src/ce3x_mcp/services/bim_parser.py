@@ -1,6 +1,9 @@
-import ifcopenshell
-import ifcopenshell.util.element
-import ifcopenshell.util.placement
+"""
+Módulo de parsing y extracción de envolvente térmica desde modelos BIM IFC (IFC2X3 e IFC4).
+Utiliza IfcOpenShell con importación perezosa (lazy import) para permitir arrancar en entornos
+sin dependencias BIM instaladas.
+"""
+
 import math
 from typing import Dict, Any, List, Optional
 from ce3x_mcp.core.models import CerramientoOpaco, HuecoVentana
@@ -10,8 +13,6 @@ def calcular_orientacion_vector(dx: float, dy: float) -> str:
     ang_rad = math.atan2(dy, dx)
     ang_deg = (math.degrees(ang_rad) + 360) % 360
     
-    # 0/360 es Este en coordenadas matemáticas estándar, pero en topografía Norte suele ser Y (90°)
-    # Asumiendo Y+ = Norte (90°), X+ = Este (0°):
     if 67.5 <= ang_deg < 112.5:
         return "N"
     elif 112.5 <= ang_deg < 157.5:
@@ -38,9 +39,23 @@ def extraer_envolvente_desde_ifc(ifc_path: str, u_fachada_defecto: float = 0.45,
     - Cubiertas y soleras (IfcSlab).
     """
     try:
+        import ifcopenshell
+        import ifcopenshell.util.element
+        import ifcopenshell.util.placement
+    except ImportError:
+        return {
+            "valido": False,
+            "error": (
+                "El módulo 'ifcopenshell' no está instalado en este entorno de Python. "
+                "Para analizar modelos BIM IFC, instálelo ejecutando: pip install ifcopenshell "
+                "o instale el extra bim: pip install 'ce3x-mcp-server[bim]'"
+            )
+        }
+
+    try:
         model = ifcopenshell.open(ifc_path)
     except Exception as e:
-        return {"error": f"No se pudo abrir el archivo IFC: {str(e)}"}
+        return {"valido": False, "error": f"No se pudo abrir el archivo IFC: {str(e)}"}
         
     # 1. Espacios útiles (IfcSpace)
     spaces = model.by_type("IfcSpace")
@@ -49,7 +64,6 @@ def extraer_envolvente_desde_ifc(ifc_path: str, u_fachada_defecto: float = 0.45,
     
     for sp in spaces:
         psets = ifcopenshell.util.element.get_psets(sp)
-        # Buscar área en psets estándar (Qto_SpaceBaseQuantities o similar)
         area = 0.0
         for pset_name, props in psets.items():
             if "Area" in props:
@@ -74,7 +88,6 @@ def extraer_envolvente_desde_ifc(ifc_path: str, u_fachada_defecto: float = 0.45,
                 is_external = True
                 break
                 
-        # Si está explícitamente marcado como exterior o no tiene IsExternal pero tiene cantidad neta
         if is_external:
             area = 0.0
             for pset_name, props in psets.items():
@@ -88,7 +101,7 @@ def extraer_envolvente_desde_ifc(ifc_path: str, u_fachada_defecto: float = 0.45,
                 opacos.append(CerramientoOpaco(
                     nombre=f"Muro_{idx+1}_{wall.Name or 'Fachada'}",
                     tipo="FachadaAire",
-                    orientacion="N", # Default si no hay matriz de rotación disponible
+                    orientacion="N",
                     superficie=round(area, 2),
                     transmitancia_u=u_fachada_defecto
                 ))
@@ -126,4 +139,3 @@ def extraer_envolvente_desde_ifc(ifc_path: str, u_fachada_defecto: float = 0.45,
         "opacos": [o.model_dump() for o in opacos],
         "huecos": [h.model_dump() for h in huecos]
     }
-

@@ -47,7 +47,7 @@
 > Sigue estos 3 pasos inmediatos para tener la herramienta funcionando en 1 minuto:
 > 
 > 1. **Doble Clic al Instalador:** Haz doble clic sobre [`instalar_en_claude_desktop.bat`](./instalar_en_claude_desktop.bat) en la raíz del repositorio. Configurará Claude Desktop y Cursor automáticamente sin tocar nada de código.
-> 2. **Abre Claude Desktop o Cursor:** El servidor `ce3x` aparecerá conectado y listo para usar con sus **25 herramientas oficiales**.
+> 2. **Abre Claude Desktop o Cursor:** El servidor `ce3x` aparecerá conectado y listo para usar con sus **26 herramientas oficiales**.
 > 3. **Escribe en el chat:**  
 >    > *"Certifica la vivienda de la carpeta `ejemplos/visita_vivienda_ejemplo`"*  
 >    *(Verás cómo la IA organiza las fotos, planos y notas, y genera la carpeta `CERTIFICADO/` con los archivos oficiales).*
@@ -166,14 +166,17 @@ Y en tu archivo de configuración MCP indicas el intérprete local:
 
 ---
 
-## 🛠️ Catálogo Completo de 25 Herramientas MCP Disponibles
+## 🛠️ Catálogo Completo de 26 Herramientas MCP Disponibles
 
 El servidor implementa el mapeo total y exhaustivo de CE3X v3.2, manuales técnicos y normativas oficiales:
 
+### 🔍 Verificación Oficial y Conectividad con CE3X v3.2
+1. `verificar_conexion_ce3x(directorio_ce3x)`: Verificación y testeo en vivo de la instalación de CE3X v3.2, comprobando `CE3Xv3.2.exe`, compilador Typst `xml2cert.exe`, validador RelaxNG `xmlcheck.exe`, base de datos de escalas oficiales (`Escala/Localidades.xml`) para las 32 zonas climáticas, motores climáticos `Calculos/BDClima` y entornos de ejecución Java.
+
 ### 🏛️ Datos Administrativos, Catastro y Clima
-1. `consultar_catastro(referencia_catastral)`: Ingesta telemática en tiempo real desde la Sede Electrónica de Catastro.
-2. `determinar_zona_climatica(provincia, municipio, altitud)`: Clima oficial de referencia CTE DB-HE con corrección por cota.
-3. `registrar_visita_presencial(fecha_visita, pruebas, observaciones)`: Registro formal in situ para el Anexo IV obligatorio (RD 390/2021 Art. 8).
+2. `consultar_catastro(referencia_catastral)`: Ingesta telemática en tiempo real desde la Sede Electrónica de Catastro.
+3. `determinar_zona_climatica(provincia, municipio, altitud)`: Clima oficial de referencia CTE DB-HE con corrección por cota.
+4. `registrar_visita_presencial(fecha_visita, pruebas, observaciones)`: Registro formal in situ para el Anexo IV obligatorio (RD 390/2021 Art. 8).
 
 ### 📐 Envolvente Térmica, BIM y Planos
 4. `estimar_envolvente_por_defecto(ano_construccion, zona, superficie)`: Transmitancias U históricas (Pre-79, NBE-CT-79, CTE).

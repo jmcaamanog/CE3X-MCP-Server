@@ -31,7 +31,7 @@ def compilar_pdf_desde_xml(xml_path: str, output_dir: str, xml2cert_bin: Optiona
                 env["PATH"] = java_bin_dir + os.pathsep + env.get("PATH", "")
                 break
                 
-    cmd = [bin_path, xml_path, "-o", output_dir]
+    cmd = [bin_path, "-o", output_dir, xml_path]
     try:
         proc = subprocess.run(
             cmd,

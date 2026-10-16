@@ -12,13 +12,20 @@ from typing import Dict, Any, Optional
 PROFILE_PATH = os.path.join(os.path.expanduser("~"), ".ce3x_mcp_perfil_tecnico.json")
 
 DEFAULT_PROFILE = {
-    "nombre_tecnico": "Jose Manuel Caamaño González",
-    "nif_tecnico": "00000000Z",
-    "titulacion": "Arquitecto Técnico",
-    "colegio_profesional": "COATAC - Colegio Oficial de la Arquitectura Técnica de A Coruña",
-    "numero_colegiado": "1500",
-    "razon_social": "Estudio Técnico JMC",
-    "comunidad_autonoma": "Galicia"
+    "nombre_tecnico": "Técnico Certificador Colegiado",
+    "nif_tecnico": "00000000T",
+    "titulacion": "Arquitectura técnica o aparejadores",
+    "colegio_profesional": "Colegio Oficial Profesional",
+    "numero_colegiado": "",
+    "razon_social": "Despacho Profesional de Certificación Energética",
+    "domicilio": "Domicilio Profesional",
+    "municipio": "A Coruña",
+    "provincia": "A Coruña",
+    "codigo_postal": "15001",
+    "comunidad_autonoma": "Galicia",
+    "email": "tecnico@certificador.es",
+    "telefono": "981000000",
+    "perfil_personalizado": False
 }
 
 def obtener_perfil_tecnico() -> Dict[str, Any]:

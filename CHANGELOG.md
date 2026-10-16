@@ -4,6 +4,38 @@ En este documento se detalla la evolución y el lanzamiento oficial del servidor
 
 ---
 
+### Versión 1.5.0 — 16/10/2026: 🛡️ Reingeniería Integral de Rigor Normativo, Conexión Real con CE3X y Purga de Plantillas (26 Herramientas)
+
+Actualización mayor centrada en la veracidad técnica, eliminación radical de datos de ejemplo y conexión directa con el motor oficial de CE3X v3.2 instalado en el sistema:
+
+1. **Nueva Herramienta #26: `verificar_conexion_ce3x`**:
+   * Auditoría y comprobación en vivo de la presencia e integridad de la instalación local de CE3X v3.2 (`C:\Program Files (x86)\CE3Xv3.2`).
+   * Verificación del ejecutable `CE3Xv3.2.exe`, motor de exportación Typst (`xml2cert.exe`), validador RelaxNG (`xmlcheck.exe`), base de datos de escalas oficiales (`Escala/Localidades.xml`), bases de datos climáticas (`Calculos/BDClima`) y entorno Java auxiliar.
+   * Chequeo previo preceptivo en `generar_certificado_completo` para impedir la generación de certificaciones si no se detecta el programa oficial.
+
+2. **Conexión Directa con Escalas Oficiales y Edificios de Referencia de CE3X**:
+   * Sustitución completa de fórmulas heurísticas por el cálculo directo contra `Escala/Localidades.xml` para las 32 zonas climáticas y tipologías (Unifamiliar y Bloque).
+   * Límites de corte oficiales (A a G) para emisiones totales de CO2, consumo de energía primaria no renovable y demanda de calefacción.
+   * Detección y aviso normativo si no se especifican instalaciones reales, evitando suposiciones no contrastadas.
+
+3. **Purga Radical de Datos Residuales de Ejemplos en XML y PDF**:
+   * Eliminación definitiva de todos los datos fantasma del Centro Juvenil de Madrid (7 viviendas, torre de refrigeración de 1006 kW, UTAs, fechas desfasadas y empresa de prueba).
+   * Generación limpia de generadores térmicos con identificadores UUID v4 válidos y normalización estricta de provincias y comunidades autónomas según RelaxNG.
+   * Normalización automática de titulaciones habilitantes (ej. *Arquitectura técnica o aparejadores*) conforme a los tipos del esquema ministerial.
+   * El PDF oficial compilado con `xml2cert.exe` refleja única y exclusivamente los datos del inmueble evaluado.
+
+4. **Generador CEX Adaptativo sin Clones de CENER/Pamplona**:
+   * Mutación binaria limpia en codificación Latin-1/CP1252 que sustituye dirección, referencia catastral (20 caracteres), año, superficie, zona climática y datos del técnico sin arrastrar la geometría ni el certificador de Pamplona.
+   * Carga instantánea y fluida garantizada en la interfaz de CE3X v3.2.
+
+5. **Saneamiento del Módulo de Catastro**:
+   * Parser agnóstico de espacios de nombres XML para extraer con precisión la dirección oficial (`<ldt>`), el año real de construcción (`<ant>`), la superficie construida (`<sfc>`) y los elementos constructivos (`<lcons>`).
+
+6. **Importación Perezosa (Lazy Import) de BIM**:
+   * Eliminada la importación obligatoria en cabecera de `ifcopenshell` en `bim_parser.py`, permitiendo la instalación y arranque limpios con `pip install ce3x-mcp-server` sin requerir dependencias C++ opcionales.
+
+---
+
 ### Versión 1.0.0 — 16/10/2026: 🚀 Lanzamiento Oficial (General Availability - GA)
 
 Primera versión pública estable y consolidada del servidor MCP oficial, que implementa el mapeo exhaustivo del software ministerial CE3X v3.2, sus manuales técnicos y la normativa técnica española en **25 herramientas FastMCP oficiales**:
