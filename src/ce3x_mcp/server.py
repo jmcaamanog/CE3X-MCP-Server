@@ -74,23 +74,27 @@ from ce3x_mcp.services.libraries import (
     inferir_solucion_envolvente_por_ano
 )
 
-# Instancia oficial del servidor FastMCP
-mcp = FastMCP(
-    "CE3X-MCP-Server",
-    instructions=(
-        "Servidor MCP Oficial para Certificación Energética de Edificios en España (CE3X v3.2 / CTE DB-HE / RD 390/2021).\n\n"
-        "PRINCIPIOS FUNDAMENTALES DE RIGOR TÉCNICO Y VERACIDAD:\n"
-        "1. VERIFICACIÓN PREVIA DE CE3X: Antes de cualquier certificación, ejecuta 'verificar_conexion_ce3x' para constatar que CE3X v3.2 está instalado localmente, conectado con sus motores de cálculo, escalas oficiales (Localidades.xml) y compilador PDF (xml2cert).\n"
-        "2. PROHIBICIÓN ABSOLUTA DE DATOS INVENTADOS O FALSOS: Jamás inventar instalaciones, superficies ni envolventes. Si faltan datos críticos (tipo de calefacción, ACS o superficie), PREGUNTAR de forma precisa al usuario o técnico antes de certificar.\n"
-        "3. PROHIBICIÓN DE DATOS DE EJEMPLO: Los entregables oficiales (.cex, .xml, .pdf) deben reflejar única y exclusivamente el inmueble y técnico reales. Está terminantemente prohibido incluir datos residuales de ejemplos ajenos.\n"
-        "4. USO DE MOTORES Y ESCALAS OFICIALES: Todas las calificaciones y demandas se fundamentan en las escalas oficiales de CE3X (Escala/Localidades.xml) para la zona climática y tipología exactas.\n\n"
-        "PROTOCOLO DE INTERACCIÓN OBLIGATORIO PARA LA IA:\n"
-        "1. PRIMER CONTACTO: Si el usuario aporta una carpeta de visita, pregúntale la ruta completa (ej. C:\\MisVisitas\\Inmueble). Si aporta datos sueltos (Referencia Catastral, año, superficie), ejecuta 'consultar_catastro' para contrastar datos reales.\n"
-        "2. ESTRUCTURACIÓN AUTOMÁTICA: Si hay carpeta, ejecuta 'organizar_carpeta_visita' para ordenar en INFORMACION/, PLANOS/, FOTOS/, INSTALACIONES/ y CERTIFICADO/.\n"
-        "3. AUDITORÍA Y PREGUNTAS QUIRÚRGICAS: Ejecuta 'auditar_carpeta_visita' y formula al técnico ÚNICAMENTE preguntas sobre datos que falten (orientación, tipo real de calefacción/ACS o sombras) antes de certificar.\n"
-        "4. GENERACIÓN OFICIAL LIMPIA: Ejecuta 'certificar_desde_carpeta_visita' o 'generar_certificado_completo'. Todos los entregables (.cex nativo, XML v3.0 y PDF de 15 págs.) se generan validados y sin datos fantasma."
-    )
+# Instancia oficial del servidor FastMCP con compatibilidad hacia atrás
+INSTRUCCIONES_SERVIDOR = (
+    "Servidor MCP Oficial para Certificación Energética de Edificios en España (CE3X v3.2 / CTE DB-HE / RD 390/2021).\n\n"
+    "PRINCIPIOS FUNDAMENTALES DE RIGOR TÉCNICO Y VERACIDAD:\n"
+    "1. VERIFICACIÓN PREVIA DE CE3X: Antes de cualquier certificación, ejecuta 'verificar_conexion_ce3x' para constatar que CE3X v3.2 está instalado localmente, conectado con sus motores de cálculo, escalas oficiales (Localidades.xml) y compilador PDF (xml2cert).\n"
+    "2. PROHIBICIÓN ABSOLUTA DE DATOS INVENTADOS O FALSOS: Jamás inventar instalaciones, superficies ni envolventes. Si faltan datos críticos (tipo de calefacción, ACS o superficie), PREGUNTAR de forma precisa al usuario o técnico antes de certificar.\n"
+    "3. PROHIBICIÓN DE DATOS DE EJEMPLO: Los entregables oficiales (.cex, .xml, .pdf) deben reflejar única y exclusivamente el inmueble y técnico reales. Está terminantemente prohibido incluir datos residuales de ejemplos ajenos.\n"
+    "4. USO DE MOTORES Y ESCALAS OFICIALES: Todas las calificaciones y demandas se fundamentan en las escalas oficiales de CE3X (Escala/Localidades.xml) para la zona climática y tipología exactas.\n\n"
+    "PROTOCOLO DE INTERACCIÓN OBLIGATORIO PARA LA IA:\n"
+    "1. PRIMER CONTACTO: Si el usuario aporta una carpeta de visita, pregúntale la ruta completa (ej. C:\\MisVisitas\\Inmueble). Si aporta datos sueltos (Referencia Catastral, año, superficie), ejecuta 'consultar_catastro' para contrastar datos reales.\n"
+    "2. ESTRUCTURACIÓN AUTOMÁTICA: Si hay carpeta, ejecuta 'organizar_carpeta_visita' para ordenar en INFORMACION/, PLANOS/, FOTOS/, INSTALACIONES/ y CERTIFICADO/.\n"
+    "3. AUDITORÍA Y PREGUNTAS QUIRÚRGICAS: Ejecuta 'auditar_carpeta_visita' y formula al técnico ÚNICAMENTE preguntas sobre datos que falten (orientación, tipo real de calefacción/ACS o sombras) antes de certificar.\n"
+    "4. GENERACIÓN OFICIAL LIMPIA: Ejecuta 'certificar_desde_carpeta_visita' o 'generar_certificado_completo'. Todos los entregables (.cex nativo, XML v3.0 y PDF de 15 págs.) se generan validados y sin datos fantasma."
 )
+try:
+    mcp = FastMCP("CE3X-MCP-Server", instructions=INSTRUCCIONES_SERVIDOR)
+except TypeError:
+    try:
+        mcp = FastMCP("CE3X-MCP-Server", description=INSTRUCCIONES_SERVIDOR)
+    except TypeError:
+        mcp = FastMCP("CE3X-MCP-Server")
 
 @mcp.tool()
 def consultar_catastro(referencia_catastral: str) -> Dict[str, Any]:

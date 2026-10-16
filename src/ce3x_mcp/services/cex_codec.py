@@ -18,14 +18,19 @@ CANONICAL_TEMPLATE_PATH = os.path.join(PACKAGE_DIR, "templates", "plantilla_coru
 FALLBACK_TEMPLATE_PATH = r"C:\Program Files (x86)\CE3Xv3.2\Ejemplos\2 Vivienda dentro de bloque.cex"
 
 # Mapeo oficial de normalización de provincias de CE3X (Calculos/listados.pyd)
-# Crucial: algunas provincias homónimas llevan espacio al final en CE3X
+# Verificado directamente con la GUI oficial de CE3X v3.2 (52 provincias y ciudades autónomas)
 PROVINCIAS_CE3X = {
     "A CORUÑA": "A Coruña",
     "A CORUNA": "A Coruña",
     "CORUÑA": "A Coruña",
     "CORUNA": "A Coruña",
+    "LA CORUÑA": "A Coruña",
+    "ALAVA": "Álava",
+    "ÁLAVA": "Álava",
+    "ARABA": "Álava",
     "ALBACETE": "Albacete",
     "ALICANTE": "Alicante",
+    "ALACANT": "Alicante",
     "ALMERIA": "Almería",
     "ALMERÍA": "Almería",
     "ASTURIAS": "Asturias",
@@ -41,38 +46,49 @@ PROVINCIAS_CE3X = {
     "CANTABRIA": "Cantabria",
     "CASTELLON": "Castellón",
     "CASTELLÓN": "Castellón",
+    "CASTELLO": "Castellón",
+    "CEUTA": "Ceuta",
     "CIUDAD REAL": "Ciudad Real",
     "CORDOBA": "Córdoba",
     "CÓRDOBA": "Córdoba",
     "CUENCA": "Cuenca",
     "GIRONA": "Girona",
+    "GERONA": "Girona",
     "GRANADA": "Granada",
     "GUADALAJARA": "Guadalajara",
-    "GIPUZKOA": "Gipuzkoa",
-    "GUIPUZCOA": "Gipuzkoa",
+    "GUIPUZCOA": "Guipúzcoa",
+    "GUIPÚZCOA": "Guipúzcoa",
+    "GIPUZKOA": "Guipúzcoa",
     "HUELVA": "Huelva",
     "HUESCA": "Huesca",
     "ILLES BALEARS": "Illes Balears",
     "BALEARES": "Illes Balears",
+    "ISLAS BALEARES": "Illes Balears",
     "JAEN": "Jaén",
     "JAÉN": "Jaén",
     "LA RIOJA": "La Rioja",
+    "RIOJA": "La Rioja",
     "LAS PALMAS": "Las Palmas",
     "LEON": "León",
     "LEÓN": "León",
     "LLEIDA": "Lleida",
+    "LERIDA": "Lleida",
+    "LÉRIDA": "Lleida",
     "LUGO": "Lugo",
     "MADRID": "Madrid ",
     "MALAGA": "Málaga",
     "MÁLAGA": "Málaga",
+    "MELILLA": "Melilla",
     "MURCIA": "Murcia",
     "NAVARRA": "Navarra",
+    "NAFARROA": "Navarra",
     "OURENSE": "Ourense",
     "ORENSE": "Ourense",
     "PALENCIA": "Palencia",
     "PONTEVEDRA": "Pontevedra",
     "SALAMANCA": "Salamanca",
     "SANTA CRUZ DE TENERIFE": "Santa Cruz de Tenerife",
+    "TENERIFE": "Santa Cruz de Tenerife",
     "SEGOVIA": "Segovia",
     "SEVILLA": "Sevilla",
     "SORIA": "Soria",
@@ -80,11 +96,20 @@ PROVINCIAS_CE3X = {
     "TERUEL": "Teruel",
     "TOLEDO": "Toledo",
     "VALENCIA": "Valencia",
+    "VALÈNCIA": "Valencia",
     "VALLADOLID": "Valladolid",
-    "BIZKAIA": "Bizkaia",
-    "VIZCAYA": "Bizkaia",
+    "VIZCAYA": "Vizcaya",
+    "BIZKAIA": "Vizcaya",
     "ZAMORA": "Zamora",
     "ZARAGOZA": "Zaragoza"
+}
+
+# Localidades predefinidas oficiales en los desplegables de CE3X por provincia
+# Cualquier municipio no incluido en la lista de su provincia figura en CE3X como "Otro"
+LOCALIDADES_CE3X_POR_PROVINCIA = {
+    "A Coruña": ["Arteixo", "Carballo", "A Coruña", "Ferrol", "Narón", "Oleiros", "Ribeira", "Santiago de Compostela", "Otro"],
+    "Álava": ["Amurrio", "Llodio", "Salvatierra", "Vitoria-Gasteiz", "Otro"],
+    "Albacete": ["Albacete", "Almansa", "Hellin", "Villarrobledo", "Otro"],
 }
 
 def normalizar_provincia_ce3x(nombre: str) -> str:
@@ -93,6 +118,22 @@ def normalizar_provincia_ce3x(nombre: str) -> str:
         return "A Coruña"
     limpio = nombre.strip().upper()
     return PROVINCIAS_CE3X.get(limpio, nombre.strip())
+
+def normalizar_localidad_ce3x(municipio: str, provincia: str) -> str:
+    """
+    Devuelve la localidad admitida en el desplegable Choice de CE3X.
+    Si el municipio figura en la lista predefinida de la provincia, devuelve su grafía exacta.
+    Si no figura entre los municipios principales predefinidos por CE3X, devuelve 'Otro'.
+    """
+    prov_norm = normalizar_provincia_ce3x(provincia).strip()
+    mun_limpio = (municipio or "").strip()
+    if prov_norm in LOCALIDADES_CE3X_POR_PROVINCIA:
+        lista = LOCALIDADES_CE3X_POR_PROVINCIA[prov_norm]
+        for loc in lista:
+            if loc.lower() == mun_limpio.lower():
+                return loc
+        return "Otro"
+    return mun_limpio
 
 def leer_fichero_cex(ruta_archivo: str) -> List[Any]:
     """
@@ -259,10 +300,11 @@ def guardar_fichero_cex_completo(
         lines[60] = b"V" + to_lat(norm_str)
         lines[62] = b"aV" + to_lat(tipo_norm)
         lines[64] = b"aV" + to_lat(prov_norm)
-        if prov_norm.lower() == mun_norm.lower():
+        loc_gen = normalizar_localidad_ce3x(mun_norm, prov_norm)
+        if prov_norm.lower() == loc_gen.lower() or prov_norm.lower() == mun_norm.lower():
             lines[66] = b"ag3"
         else:
-            lines[66] = b"aV" + to_lat(mun_norm)
+            lines[66] = b"aV" + to_lat(loc_gen)
         lines[67] = b"aV" + to_lat(zc_norm)
         # 150 m2 mantiene la coherencia exacta con la suma de zonas de la envolvente base
         # evitando el deadlock modal (wx.MessageBox bloqueado tras wx.ProgressDialog)
