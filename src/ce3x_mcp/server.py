@@ -51,7 +51,7 @@ from ce3x_mcp.services.improvement_engine import calcular_paquetes_medidas_mejor
 from ce3x_mcp.services.pvgis_client import calcular_produccion_solar_pvgis
 from ce3x_mcp.services.nextgen_report import generar_informe_justificativo_nextgen
 from ce3x_mcp.services.plan_parser import analizar_plano_distribucion_pdf
-from ce3x_mcp.services.smart_folder_auditor import auditar_carpeta_inmueble
+from ce3x_mcp.services.smart_folder_auditor import auditar_carpeta_inmueble, certificar_inmueble_desde_carpeta
 from ce3x_mcp.services.libraries import (
     CATALOGO_MUROS_FACHADA,
     CATALOGO_VIDRIOS,
@@ -403,8 +403,33 @@ def auditar_carpeta_visita(ruta_carpeta: str) -> Dict[str, Any]:
     Audita de forma autónoma una carpeta de visita técnica (croquis, notas, planos PDF,
     imágenes, modelos BIM), extrae datos catastrales y arquitectónicos, deduce la envolvente
     según normativa histórica y genera las preguntas quirúrgicas para el técnico antes de certificar.
+    Define automáticamente la subcarpeta 'CERTIFICADO/' para la entrega final.
     """
     return auditar_carpeta_inmueble(ruta_carpeta)
+
+@mcp.tool()
+def certificar_desde_carpeta_visita(
+    ruta_carpeta: str,
+    orientacion_principal: str = "Sur",
+    tipo_calefaccion: Optional[str] = None,
+    tipo_acs: Optional[str] = None,
+    nombre_edificio: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Certifica de forma automática el inmueble a partir de la carpeta de visita.
+    Crea la subcarpeta 'CERTIFICADO/' dentro de la carpeta del inmueble y genera directamente:
+    1. Proyecto nativo editable para CE3X (.cex).
+    2. Archivo XML oficial v3.0 para registro telemático (.xml).
+    3. Informe oficial de 15 páginas compilado con Typst (.pdf).
+    4. Informe de Medidas de Mejora RD 390/2021 y Dictamen NextGen (.md / .pdf).
+    """
+    return certificar_inmueble_desde_carpeta(
+        ruta_carpeta=ruta_carpeta,
+        orientacion_principal=orientacion_principal,
+        tipo_calefaccion=tipo_calefaccion,
+        tipo_acs=tipo_acs,
+        nombre_edificio=nombre_edificio
+    )
 
 @mcp.resource("ce3x://librerias/catalogo_soluciones_constructivas")
 def obtener_catalogo_soluciones_constructivas() -> str:

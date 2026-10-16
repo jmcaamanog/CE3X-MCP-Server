@@ -10,7 +10,7 @@ from ce3x_mcp.services.cex_codec import guardar_fichero_cex_basico, leer_fichero
 from ce3x_mcp.services.equipment_parser import analizar_datos_equipo_climatizacion
 from ce3x_mcp.services.improvement_engine import calcular_paquetes_medidas_mejora
 from ce3x_mcp.services.pvgis_client import calcular_produccion_solar_pvgis
-from ce3x_mcp.services.smart_folder_auditor import auditar_carpeta_inmueble
+from ce3x_mcp.services.smart_folder_auditor import auditar_carpeta_inmueble, certificar_inmueble_desde_carpeta
 from ce3x_mcp.services.libraries import inferir_solucion_envolvente_por_ano, CATALOGO_VIDRIOS
 from ce3x_mcp.services.nextgen_report import generar_informe_justificativo_nextgen
 from ce3x_mcp.services.plan_parser import analizar_plano_distribucion_pdf
@@ -118,7 +118,19 @@ def test_smart_folder_auditor():
         assert res["referencia_catastral_encontrada"] == "2344201XK3724S0001LD"
         assert res["datos_listos_para_ce3x"]["tipo_acs"] == "EfectoJoule"
         assert len(res["preguntas_quirurgicas_al_tecnico"]) >= 2
-        print("[PASS] test_smart_folder_auditor")
+        assert res["directorio_entrega_certificado"] == os.path.join(tmp_dir, "CERTIFICADO")
+        
+        # Test generacion automatica en subcarpeta CERTIFICADO/
+        cert_res = certificar_inmueble_desde_carpeta(tmp_dir)
+        assert cert_res["estado"] == "completado_exitoso"
+        cert_dir = os.path.join(tmp_dir, "CERTIFICADO")
+        assert os.path.exists(cert_dir)
+        assert os.path.exists(os.path.join(cert_dir, "Proyecto_CE3X.cex"))
+        assert os.path.exists(os.path.join(cert_dir, "Certificado_Oficial_Registro.xml"))
+        assert os.path.exists(os.path.join(cert_dir, "Informe_Medidas_Mejora_NextGen.md"))
+        assert os.path.exists(os.path.join(cert_dir, "Informe_Medidas_Mejora_NextGen.pdf"))
+        assert os.path.exists(os.path.join(cert_dir, "RESUMEN_ENTREGA.txt"))
+        print("[PASS] test_smart_folder_auditor y certificar_desde_carpeta en CERTIFICADO/")
 
 
 if __name__ == "__main__":

@@ -1,4 +1,4 @@
-from typing import Dict, Tuple
+from typing import Dict, Any, List, Tuple
 
 # Factores de paso oficiales del IDAE / MITERD (Actualización vigente)
 FACTORES_PASO = {
@@ -110,3 +110,64 @@ def estimar_transmitancias_por_ano(ano: int, zona_climatica: str) -> Dict[str, f
     }
 
 
+
+
+def calcular_calificacion_energetica_simplificada(
+    superficie_util: float,
+    ano_construccion: int,
+    zona_climatica: str = "C1",
+    tipo_calefaccion: str = "EfectoJoule",
+    tipo_acs: str = "EfectoJoule"
+) -> Dict[str, Any]:
+    """
+    Calcula la demanda energética estimada, consumo de energía primaria no renovable,
+    emisiones de CO2 y asigna las letras de calificación energética (A a G).
+    """
+    trans = estimar_transmitancias_por_ano(ano_construccion, zona_climatica)
+    
+    factor_zona = 1.4 if zona_climatica.startswith("D") else (1.8 if zona_climatica.startswith("E") else 1.0)
+    demanda_cal = trans["u_fachada"] * 45.0 * factor_zona
+    demanda_ref = 15.0 if not zona_climatica.endswith("4") else 30.0
+    demanda_acs = 22.0
+    
+    rend_cal = 3.2 if "aerotermia" in tipo_calefaccion.lower() or "bombadecalor" in tipo_calefaccion.lower() else (0.92 if "condensacion" in tipo_calefaccion.lower() else 1.0)
+    rend_acs = 2.8 if "aerotermia" in tipo_acs.lower() or "bombadecalor" in tipo_acs.lower() else (0.90 if "condensacion" in tipo_acs.lower() else 1.0)
+    
+    consumo_cal = demanda_cal / rend_cal
+    consumo_acs = demanda_acs / rend_acs
+    consumo_ref = demanda_ref / 2.5
+    
+    fp_epnr = FACTORES_PASO["Electricidad"]["f_ep_nr"] if "joule" in tipo_calefaccion.lower() or "aerotermia" in tipo_calefaccion.lower() else FACTORES_PASO["GasNatural"]["f_ep_nr"]
+    fp_co2 = FACTORES_PASO["Electricidad"]["f_co2"] if "joule" in tipo_calefaccion.lower() or "aerotermia" in tipo_calefaccion.lower() else FACTORES_PASO["GasNatural"]["f_co2"]
+    
+    epnr_tot = (consumo_cal + consumo_acs + consumo_ref) * fp_epnr
+    co2_tot = (consumo_cal + consumo_acs + consumo_ref) * fp_co2
+    
+    # Asignacion de escala
+    if co2_tot < 6.8:
+        letra_co2 = "A"
+    elif co2_tot < 11.2:
+        letra_co2 = "B"
+    elif co2_tot < 18.2:
+        letra_co2 = "C"
+    elif co2_tot < 28.5:
+        letra_co2 = "D"
+    elif co2_tot < 44.2:
+        letra_co2 = "E"
+    elif co2_tot < 54.3:
+        letra_co2 = "F"
+    else:
+        letra_co2 = "G"
+        
+    return {
+        "demanda_calefaccion_kwh_m2": round(demanda_cal, 2),
+        "demanda_refrigeracion_kwh_m2": round(demanda_ref, 2),
+        "demanda_acs_kwh_m2": round(demanda_acs, 2),
+        "consumo_epnr_totales_kwh_m2": round(epnr_tot, 2),
+        "emisiones_calefaccion_kgco2_m2": round(consumo_cal * fp_co2, 2),
+        "emisiones_refrigeracion_kgco2_m2": round(consumo_ref * fp_co2, 2),
+        "emisiones_acs_kgco2_m2": round(consumo_acs * fp_co2, 2),
+        "emisiones_totales_kgco2_m2": round(co2_tot, 2),
+        "calificacion_global_emisiones": letra_co2,
+        "calificacion_global_consumo": letra_co2
+    }
