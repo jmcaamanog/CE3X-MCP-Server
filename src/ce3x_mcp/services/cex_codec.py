@@ -240,13 +240,16 @@ def guardar_fichero_cex_completo(
         else:
             tipo_norm = "Vivienda Individual"
 
-    # Normativa por año de construcción
-    # En CE3X v3.2: 'NBE-CT-79', 'CTE 2006', 'CTE 2013'
-    if ano_construccion < 1979:
+    # Normativa por año de construcción oficial de CE3X
+    # Claves internas de CE3X: 'Anterior' (<1980), 'NBE-CT-79' (1980-1998),
+    # 'NBE-CT-79_aPartir1998' (1998-2007), 'CTE 2006' (2007-2013), 'CTE 2013' (>=2014)
+    if ano_construccion < 1980:
+        norm_str = "Anterior"
+    elif ano_construccion < 1998:
         norm_str = "NBE-CT-79"
-    elif ano_construccion < 2006:
-        norm_str = "NBE-CT-79"
-    elif ano_construccion < 2013:
+    elif ano_construccion < 2007:
+        norm_str = "NBE-CT-79_aPartir1998"
+    elif ano_construccion < 2014:
         norm_str = "CTE 2006"
     else:
         norm_str = "CTE 2013"
@@ -303,7 +306,7 @@ def guardar_fichero_cex_completo(
             grado_prot = "Ninguna"
         lines[54] = b"aV" + to_lat(grado_prot)
 
-        # Mutación quirúrgica en Objeto 2 (Datos Generales, índices 60-75)
+        # Mutación quirúrgica en Objeto 2 (Datos Generales, índices 60-108)
         lines[60] = b"V" + to_lat(norm_str)
         lines[62] = b"aV" + to_lat(tipo_norm)
         lines[64] = b"aV" + to_lat(prov_norm)
@@ -313,10 +316,17 @@ def guardar_fichero_cex_completo(
         else:
             lines[66] = b"aV" + to_lat(loc_gen)
         lines[67] = b"aV" + to_lat(zc_norm)
-        # 150 m2 mantiene la coherencia exacta con la suma de zonas de la envolvente base
-        # evitando el deadlock modal (wx.MessageBox bloqueado tras wx.ProgressDialog)
-        lines[71] = b"aV150"
-        lines[73] = b"aV2.5"
+
+        # Superficie útil real y altura libre
+        sup_str = f"{superficie_util:.2f}".rstrip("0").rstrip(".") if superficie_util else "150"
+        alt_str = f"{altura_libre:.2f}".rstrip("0").rstrip(".") if altura_libre else "2.6"
+        lines[71] = b"aV" + to_lat(sup_str)
+        lines[73] = b"aV" + to_lat(alt_str)
+
+        # Año de construcción real (Línea 97) y Superficie CTE DB-HE (Línea 101)
+        if len(lines) > 102:
+            lines[97] = b"aV" + to_lat(str(ano_construccion))
+            lines[101] = b"aV" + to_lat(sup_str)
     resultado_bytes = b"\r\n".join(lines)
     os.makedirs(os.path.dirname(os.path.abspath(ruta_salida)), exist_ok=True)
     with open(ruta_salida, "wb") as f:
