@@ -1,4 +1,4 @@
-﻿import xml.etree.ElementTree as ET
+import xml.etree.ElementTree as ET
 import os
 from typing import Optional
 from ce3x_mcp.core.models import ProyectoCertificacion, ResultadoCalificacion

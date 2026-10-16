@@ -1,4 +1,4 @@
-﻿import ifcopenshell
+import ifcopenshell
 import ifcopenshell.util.element
 import ifcopenshell.util.placement
 import math

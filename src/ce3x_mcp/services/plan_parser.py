@@ -1,4 +1,4 @@
-﻿import pymupdf
+import pymupdf
 import re
 from typing import Dict, Any, List, Optional
 

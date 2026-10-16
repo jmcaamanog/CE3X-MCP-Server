@@ -1,4 +1,4 @@
-﻿import pickle
+import pickle
 import io
 from typing import Any, List, Dict
 

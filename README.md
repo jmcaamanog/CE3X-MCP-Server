@@ -1,4 +1,4 @@
-﻿# 🏢 CE3X-MCP-Server (Certificación Energética con IA & FastMCP)
+# 🏢 CE3X-MCP-Server (Certificación Energética con IA & FastMCP)
 
 | 🏗️ Perfil & ConTech | 📈 Repositorio & Enlaces |
 | :--- | :--- |
@@ -13,25 +13,36 @@
 
 | 🌟 Recurso | 🚀 Acción / Enlace | 📝 Descripción |
 | :--- | :--- | :--- |
-| **Documento de Análisis** | 📄 **[Ver Análisis CE3X & MCP](./docs/analisis_ce3x_mcp_framework.md)** | Análisis exhaustivo del software, manuales técnicos y arquitectura. |
+| **Estudio de Conectores** | 🌐 **[Ver Estudio Integral de Conexiones](./docs/ESTUDIO_INTEGRAL_CONECTORES_CE3X_MCP.md)** | Mapeo pantalla a pantalla y botón a botón de CE3X a conectores de IA. |
+| **Documento de Análisis** | 📄 **[Ver Análisis CE3X & MCP](./docs/analisis_ce3x_mcp_framework.md)** | Análisis exhaustivo del software, manuales técnicos y arquitectura modular. |
 | **Historial de Versiones** | 📜 **[Ver Changelog](./CHANGELOG.md)** | Registro detallado de versiones y mejoras implementadas. |
 | **Repositorio GitHub** | 💻 **[GitHub jmcaamanog](https://github.com/jmcaamanog/CE3X-MCP-Server)** | Código fuente, issues y lanzamientos oficiales. |
+
+---
+
+## 👥 Perfiles y Modos de Uso para Cualquier Profesional
+
+| Perfil / Modo | Icono | Descripción del Flujo | Entrada Requerida | Entregables Generados |
+| :--- | :---: | :--- | :--- | :--- |
+| **Modo Express (Datos Mínimos)** | ⚡ | **Certificación ultrarrápida en segundos** interactuando por chat. La IA infiere automáticamente la envolvente y el clima normativo oficial. | Referencia Catastral (o municipio) + año + superficie + climatización básica. | Archivo .cex, XML oficial v3.0 homologado y **PDF oficial de 15 páginas**. |
+| **Modo Técnico Documental** | 📐 | **Extracción multimodal asistida por IA**. Lee planos arquitectónicos en PDF y fotos de placas de características de equipos térmicos. | Plano de distribución en PDF/imagen + fotos o fichas técnicas de caldera/aerotermia. | Desglose completo de estancias, fachadas, ventanas, potencias y rendimientos estacionales (SCOP/COP). |
+| **Modo BIM & Auditoría NextGen** | 🏗️ | **Conexión directa con modelos BIM** y justificación automática de subvenciones públicas y deducciones IRPF. | Archivo BIM .ifc (Revit, Archicad, CYPE) o proyecto de rehabilitación. | Cubicación BIM con IfcOpenShell, cálculo solar satelital PVGIS, salto a letra A y **Dictamen NextGen (RD 853/2021)**. |
 
 ---
 
 > [!IMPORTANT]
 > ### 📥 Instalación Rápida para Clientes MCP (Claude Desktop, Cursor, Antigravity)
 > Para integrar este servidor en tu cliente de IA favorito:
-> `ash
+> ```bash
 > # Ejecución directa con uvx (sin instalación manual):
 > uvx --from git+https://github.com/jmcaamanog/CE3X-MCP-Server ce3x-mcp
-> `
+> ```
 > O mediante instalación local con pip:
-> `ash
+> ```bash
 > git clone https://github.com/jmcaamanog/CE3X-MCP-Server.git
 > cd CE3X-MCP-Server
 > pip install -e .
-> `
+> ```
 
 ---
 
@@ -42,28 +53,29 @@
 | **Ingesta Catastral Automática** | 🏛️ | Conexión directa con la **Sede Electrónica del Catastro (OVC)** para extraer datos oficiales, año de edificación, superficie y dirección con solo la Referencia Catastral. |
 | **Motor Normativo CTE DB-HE** | 📐 | Determinación automática de **zonas climáticas CTE (α1 a E1)** con corrección por altitud y asignación de transmitancias límite e históricas (NBE-CT-79, CTE 2006/2013/2019). |
 | **Exportación a CE3X (.cex)** | 💾 | Generación y lectura nativa de archivos de proyecto **.cex** para abrir, auditar y recalcular en la interfaz oficial de CE3X v3.2. |
-| **XML Oficial de Registro** | 📑 | Creación de archivos XML normalizados conforme a la especificación **DatosEnergeticosDelEdificio v3.0**, validados contra el esquema RelaxNG oficial del Ministerio. |
-| **Compilación de PDF Homologado** | 🖨️ | Integración con **Typst / xml2cert** (IETcc-CSIC) para compilar en segundos el certificado oficial completo de 8 a 15 páginas con gráficos y anejos. |
-| **Medidas de Mejora Inteligentes** | 🌿 | Propuesta automatizada de paquetes de rehabilitación (SATE, aerotermia, fotovoltaica) con cálculo de ahorro %, nuevo salto de letra y periodo de retorno económico. |
+| **XML Oficial de Registro** | 📑 | Creación de archivos XML normalizados conforme a la especificación **DatosEnergeticosDelEdificio v3.0**, validados al 100% contra el esquema RelaxNG oficial del Ministerio. |
+| **Compilación de PDF Homologado** | 🖨️ | Integración con **Typst / xml2cert** (IETcc-CSIC) para compilar en segundos el certificado oficial completo de 15 páginas con gráficos y anejos. |
+| **Cálculo Solar Satelital PVGIS** | ☀️ | Conexión en vivo con la **API oficial PVGIS de la Comisión Europea** (JRC) para estimar la producción fotovoltaica real (kWh/año) según radiación satelital SARAH-2. |
+| **Medidas de Mejora & NextGen** | 🌿 | Propuesta automatizada de paquetes de rehabilitación (SATE, aerotermia, fotovoltaica) con cálculo de ahorro %, nuevo salto de letra, amortización y **dictamen para ayudas RD 853/2021 y deducciones IRPF**. |
 
 ---
 
 ## 🚀 Configuración en Clientes MCP
 
-### Configuración en claude_desktop_config.json
-`json
+### Configuración en claude_desktop_config.json o mcp_config.json
+```json
 {
-  \"mcpServers\": {
-    \"ce3x\": {
-      \"command\": \"python\",
-      \"args\": [
-        \"-m\",
-        \"ce3x_mcp.server\"
+  "mcpServers": {
+    "ce3x": {
+      "command": "python",
+      "args": [
+        "-m",
+        "ce3x_mcp.server"
       ]
     }
   }
 }
-`
+```
 
 ---
 

@@ -1,4 +1,4 @@
-﻿from typing import Dict, Any, List
+from typing import Dict, Any, List
 from ce3x_mcp.core.models import ProyectoCertificacion, ResultadoCalificacion, MedidaMejora
 
 def generar_informe_justificativo_nextgen(

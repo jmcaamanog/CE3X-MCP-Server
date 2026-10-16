@@ -259,38 +259,15 @@ graph TB
 
 ---
 
-## 8. Hoja de Ruta de Implementación Propuesta (Roadmap)
+## 8. Arquitectura Modular y Fases de Madurez del Ecosistema
 
-- [ ] **Fase 0: Inicialización del Repositorio**
-  - [ ] Crear repositorio privado en GitHub (ej. `mcp-ce3x` o `ce3x-mcp`) en `c:\Users\Jose\OneDrive\GITHUB\mcp-ce3x`.
-  - [ ] Configurar `.gitignore` (excluyendo entornos virtuales, cachés y la carpeta `NOTAS/`).
-  - [ ] Inicializar `pyproject.toml` con soporte para Python 3.11+, FastMCP, Pydantic, lxml, shapely, pymupdf.
-  - [ ] Crear `NOTAS/NOTAS_1_JMCG.md` y `NOTAS/NOTAS_2_GEMINI.md` en el nuevo repositorio.
+El ecosistema **CE3X-MCP-Server** se estructura en cinco capas modulares diseñadas para ofrecer máxima robustez técnica, interoperabilidad sectorial y escalabilidad industrial:
 
-- [ ] **Fase 1: Núcleo de Datos y Fórmulas Normativas (Core Engine)**
-  - [ ] Módulo de consulta a Catastro (Sede Electrónica / OVS) para datos de inmueble automáticos.
-  - [ ] Tablas oficiales de zonas climáticas CTE DB-HE y conversiones energéticas/emisiones.
-  - [ ] Generador y validador de XML oficial `DatosEnergeticosDelEdificio version 3.0` contra RelaxNG.
-  - [ ] Conector con `xml2cert.exe` para generación automática del PDF oficial del certificado.
-  - [ ] Lector y escritor bidireccional del formato nativo `.cex` de CE3X.
-
-- [ ] **Fase 2: Implementación del Servidor FastMCP**
-  - [ ] Configurar servidor FastMCP con transportes `stdio` y `sse`.
-  - [ ] Implementar `@mcp.tool` para datos mínimos, cálculo y generación de entregables.
-  - [ ] Implementar `@mcp.resource` para catálogos normativos, transmitancias y factores solares.
-  - [ ] Implementar `@mcp.prompt` para los flujos asistidos de certificación y auditoría.
-
-- [ ] **Fase 3: Módulo de Ingesta Multimodal (Planos y Fichas)**
-  - [ ] Parser de planos arquitectónicos (PDF/imagen): extracción de áreas de recintos, fachadas y huecos.
-  - [ ] Soporte para modelos BIM IFC (`ifcopenshell`) para cubicación directa de la envolvente térmica.
-  - [ ] Parser de fichas técnicas de climatización/ventanas (extracción de potencias, COP/SCOP/EER).
-
-- [ ] **Fase 4: Motor de Medidas de Mejora y Análisis Económico**
-  - [ ] Generación automática de paquetes de mejora (SATE, carpinterías, aerotermia, fotovoltaica).
-  - [ ] Cálculo de nuevo consumo, ahorro porcentual y salto de letra.
-  - [ ] Estimación de presupuesto de ejecución, amortización y deducciones IRPF / ayudas NextGen.
-
-- [ ] **Fase 5: Documentación Oficial, Pruebas y Despliegue**
-  - [ ] Redacción del `README.md` oficial bajo la Guía de Estilo JMCG (badges `style=plastic`, 2 columnas).
-  - [ ] Batería de pruebas con los 5 ejemplos oficiales de CE3X (`1 Bloque de viviendas.cex`, `3 Pequeno terciario.cex`, etc.).
-  - [ ] Guía de instalación y configuración en Claude Desktop, Antigravity IDE y Cursor.
+| Fase / Capa | Alcance Técnico | Componentes Principales | Capacidades Clave |
+| :--- | :--- | :--- | :--- |
+| **Capa 1: Core Normativo & Cálculo** | Motor térmico reglamentario y enlaces oficiales | catastro.py, cte_climate.py, xml_builder.py, cex_codec.py | Sede Electrónica Catastro, Zonas Climáticas CTE DB-HE, XML oficial v3.0 RelaxNG y códec nativo .cex. |
+| **Capa 2: Orquestación FastMCP** | Exposición de herramientas, recursos y prompts | server.py, FastMCP, stdio / SSE transports | 11 MCP Tools de alta precisión, recursos de factores de paso IDAE y flujos guiados interactivos. |
+| **Capa 3: Ingesta Multimodal (Planos & BIM)** | Visión computacional y modelado digital | plan_parser.py, im_parser.py (PyMuPDF, IfcOpenShell) | Extracción de envolvente térmica desde planos PDF y extracción paramétrica nativa desde modelos IFC. |
+| **Capa 4: Auditoría Energética & Subvenciones** | Rehabilitación, energía solar y dictámenes | improvement_engine.py, pvgis_client.py, 
+extgen_report.py | Paquetes de mejora RD 390/2021, cálculo solar satelital PVGIS (JRC) y dictámenes oficiales NextGen RD 853/2021. |
+| **Capa 5: Generación Documental Homologada** | Salida gráfica y compilación ministerial | pdf_compiler.py, Typst / xml2cert.exe | Compilación instantánea del Certificado de Eficiencia Energética oficial de 15 páginas y anejos técnicos. |

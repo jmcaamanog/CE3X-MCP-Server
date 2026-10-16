@@ -1,4 +1,4 @@
-﻿import requests
+import requests
 from typing import Dict, Any, Optional
 
 PVGIS_API_URL = "https://re.jrc.ec.europa.eu/api/v5_2/PVcalc"

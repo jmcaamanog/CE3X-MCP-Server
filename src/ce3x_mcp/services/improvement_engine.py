@@ -1,4 +1,4 @@
-﻿from typing import List, Dict, Any
+from typing import List, Dict, Any
 from ce3x_mcp.core.models import MedidaMejora, ProyectoCertificacion, ResultadoCalificacion
 
 def calcular_paquetes_medidas_mejora(proyecto: ProyectoCertificacion, actual: ResultadoCalificacion) -> List[MedidaMejora]:

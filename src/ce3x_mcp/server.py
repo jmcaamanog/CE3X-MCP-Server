@@ -1,4 +1,4 @@
-﻿try:
+try:
     from fastmcp import FastMCP
 except ImportError:
     try:
@@ -55,7 +55,7 @@ from ce3x_mcp.services.plan_parser import analizar_plano_distribucion_pdf
 # Instancia oficial del servidor FastMCP
 mcp = FastMCP(
     "CE3X-MCP-Server",
-    description="Servidor MCP Oficial para Certificación Energética de Edificios en España (CE3X / CTE DB-HE / RD 390/2021)"
+    instructions="Servidor MCP Oficial para Certificación Energética de Edificios en España (CE3X / CTE DB-HE / RD 390/2021)"
 )
 
 @mcp.tool()

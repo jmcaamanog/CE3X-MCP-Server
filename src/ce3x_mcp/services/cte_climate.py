@@ -1,4 +1,4 @@
-﻿from typing import Dict, Tuple
+from typing import Dict, Tuple
 
 # Factores de paso oficiales del IDAE / MITERD (Actualización vigente)
 FACTORES_PASO = {

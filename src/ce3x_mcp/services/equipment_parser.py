@@ -1,4 +1,4 @@
-﻿import re
+import re
 from typing import Dict, Any, List
 from ce3x_mcp.core.models import InstalacionTermica
 
