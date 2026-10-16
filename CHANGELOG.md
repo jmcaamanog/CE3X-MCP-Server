@@ -1,88 +1,47 @@
 # 📜 Registro de Versiones (Changelog) - CE3X-MCP-Server
 
-En este documento se detalla la evolución completa del servidor oficial MCP para la integración de Inteligencia Artificial con el motor de certificación energética oficial de España **CE3X v3.2**, conforme al **RD 390/2021** y al **Código Técnico de la Edificación (CTE DB-HE)**.
+En este documento se detalla la evolución y el lanzamiento oficial del servidor **CE3X-MCP-Server**, la plataforma oficial de interoperabilidad entre Modelos de Lenguaje (IA) y el motor oficial de certificación energética de edificios de España **CE3X v3.2**, conforme al **Real Decreto 390/2021** y al **Código Técnico de la Edificación (CTE DB-HE)**.
 
 ---
 
-### Versión 1.4.0 — 16/10/2026: 🚀 25 Herramientas Oficiales, Cálculos ISO 10077-1, ACS CTE DB-HE 4 y Matriz Exhaustiva de Variantes
+### Versión 1.0.0 — 16/10/2026: 🚀 Lanzamiento Oficial (General Availability - GA)
 
-* **🪟 Cálculo de Transmitancia de Ventana UNE-EN ISO 10077-1 (`calcular_transmitancia_ventana_iso10077`):**
-  - Implementación del cálculo oficial por componentes: vidrio ($U_g$), marco ($U_f$), intercalario perimetral ($\Psi_g$) y fracción de hueco.
-  - Comprobación automática de cumplimiento de límites de transmitancia del CTE DB-HE 1 según zona climática.
-* **🚿 Demanda de Agua Caliente Sanitaria Oficial CTE DB-HE 4 (`calcular_demanda_acs_cte_he4`):**
-  - Cálculo de ocupación de diseño y dotación de referencia (28 l/día a 60 °C por persona en residencial privado).
-  - Temperatura de agua de red provincial mes a mes para estimación exacta de demanda energética anual ($kWh/año$).
-* **🧪 Batería Exhaustiva de Matrices de Escenarios y Variantes (100% Passed):**
-  - Validación de envolventes y muros históricos (Pre-1979, NBE-CT-79, CTE 2006, CTE 2013, CTE 2019 nZEB).
-  - Validación de 8 combinaciones de climatización (Gas estándar, Condensación, Gasóleo, Efecto Joule, Bomba de calor inverter, Aerotermia, Biomasa y VRF).
-  - Validación de 6 orientaciones cardinales e intermedias, con sombras por voladizo, retranqueo, toldos y edificios colindantes remotos.
-  - Validación de puentes térmicos lineales (DA DB-HE / 3) y ensayos de flujometría in situ s/ UNE-EN ISO 9869-1.
-  - Validación de saltos de letra energética (hasta letra A) y dictámenes de subvención NextGen EU (tramos 40%, 65%, 80% y deducciones IRPF).
+Primera versión pública estable y consolidada del servidor MCP oficial, que implementa el mapeo exhaustivo del software ministerial CE3X v3.2, sus manuales técnicos y la normativa técnica española en **25 herramientas FastMCP oficiales**:
 
----
+#### 🏛️ 1. Núcleo Normativo y Motor Oficial de Certificación
+* **Compatibilidad Binaria Perfecta de Proyectos `.cex`:** Lector y escritor nativo en Python 3 de archivos de proyecto `.cex` de CE3X v3.2, utilizando deserialización segura `SafeUnpickler` (protocolo 0) y mutación quirúrgica con codificación Latin-1/CP1252 para prevenir excepciones en wxPython.
+* **Generador y Validador de XML Oficial v3.0:** Generación de archivos XML reglamentarios según la especificación *DatosEnergeticosDelEdificio v3.0*, validados al 100% contra el esquema RelaxNG oficial del Ministerio de Vivienda y Agenda Urbana (`xmlcheck.exe`).
+* **Compilación de PDF Homologado de 15 Páginas:** Integración con Typst y el compilador oficial `xml2cert.exe` (IETcc-CSIC) para la generación instantánea del certificado de eficiencia energética oficial completo con gráficos y anexos.
+* **Ingesta Telemática del Catastro (OVC):** Conexión directa en tiempo real con la Sede Electrónica de Catastro para recuperar automáticamente año de construcción, superficie construida y localización mediante la Referencia Catastral (`consultar_catastro`).
+* **Zonificación Climática Oficial CTE DB-HE:** Asignación automática de zonas climáticas (α1 a E1) según municipio, capital de provincia y corrección de altitud del CTE DB-HE Apéndice B (`determinar_zona_climatica`).
 
-### Versión 1.3.0 — 16/10/2026: 🚀 22 Herramientas Oficiales, Instalador 1-Clic e Integración PyPI
+#### 📐 2. Envolvente Térmica, Sombras y Cálculos Normativos Avanzados
+* **Inferencia de Envolvente Histórica:** Biblioteca de arquetipos constructivos de fachadas, cubiertas y huecos según el año de construcción (Pre-1979, NBE-CT-79, CTE 2006, CTE 2013 y CTE 2019 nZEB) con asignación de transmitancias $U$ por defecto (`estimar_envolvente_por_defecto`).
+* **Cálculo de Transmitancia de Ventanas UNE-EN ISO 10077-1:** Cálculo por componentes de la transmitancia total del hueco $U_w$ ($U_g$ vidrio, $U_f$ marco, $\Psi_g$ intercalario y fracción de hueco) con comprobación de límites CTE (`calcular_transmitancia_ventana_iso10077`).
+* **Puentes Térmicos Lineales DA DB-HE / 3:** Estimación reglamentaria de valores $\Psi$ (W/m·K) para frentes de forjado, contorno de huecos y pilares integrados en fachada (`calcular_puentes_termicos`).
+* **Patrones de Sombra Estacionales:** Cálculo del factor reductor solar $F_{sh}$ para huecos con voladizos, retranqueos de mocheta y toldos (`calcular_sombras_hueco`), así como sombras por obstáculos remotos y edificios colindantes mediante ángulo de elevación $lpha = rctan(H/D)$ (`calcular_sombras_obstaculo_edificio_enfrente`).
+* **Cálculo de Pequeño Terciario y Locales:** Determinación de potencia de iluminación ($W/m^2$), VEEI objetivo (CTE DB-HE 3) y caudales de ventilación exterior según RITE (`calcular_parametros_terciario_local_comercial`).
 
-* **🖱️ Instalador Automático de 1 Clic para Windows (`instalar_en_claude_desktop.bat`):**
-  - Script autoejecutable sin consola ni necesidad de conocimientos técnicos.
-  - Localiza e inyecta de forma no destructiva la configuración de `ce3x` en Claude Desktop (`claude_desktop_config.json`) y Cursor IDE (`.cursor/mcp.json`).
-* **📦 Preparación y Soporte Universal PyPI (`uvx ce3x-mcp`):**
-  - Configuración dual de ejecutables de entrada en `pyproject.toml` (`ce3x-mcp` y `ce3x-mcp-server`).
-* **🏢 Soporte Integral de Pequeño Terciario y Locales Comerciales (`calcular_parametros_terciario_local_comercial`):**
-  - Cálculo de potencia de iluminación instalada ($W/m^2$), VEEI objetivo conforme a CTE DB-HE 3 y tasas de renovación de aire exterior según RITE (IDA 2 / IDA 3).
-* **🏙️ Cálculo de Sombras por Obstáculo Remoto / Edificio Enfrente (`calcular_sombras_obstaculo_edificio_enfrente`):**
-  - Cálculo angular de elevación $\alpha = \arctan(H/D)$ y factor reductor estacional $F_{sh}$ conforme a las tablas oficiales de obstáculos de CE3X y CTE DB-HE.
-* **✍️ Perfil Técnico Colegial Persistente (`configurar_perfil_tecnico_colegiado`):**
-  - Almacenamiento seguro en `~/.ce3x_mcp_perfil_tecnico.json` para autorrellenado automático de credenciales profesionales en `.cex`, XML y PDFs oficiales.
-* **🧪 Batería de Pruebas Unitarias al 100%:** 22 herramientas FastMCP verificadas con 8 suites de tests pasando satisfactoriamente.
+#### ⚙️ 3. Instalaciones Térmicas, ACS y Simulación Solar Satelital
+* **Demanda de ACS Oficial CTE DB-HE 4:** Cálculo de la demanda obligatoria de agua caliente sanitaria a 60 °C ($l/día$ y $kWh/año$) según dotaciones por número de dormitorios y tabla mensual de temperatura de agua de red provincial (`calcular_demanda_acs_cte_he4`).
+* **Parser Inteligente de Equipos Térmicos:** Reconocimiento de equipos a partir de fichas técnicas o fotos de placas (calderas estándar, condensación, gasóleo, efecto Joule, bombas de calor inverter, aerotermia, biomasa y VRF), con conversión de Watts a kW y cálculo de rendimiento estacional (`analizar_ficha_equipo_clima`).
+* **Producción Fotovoltaica Satelital con PVGIS:** Conexión en vivo con la API oficial PVGIS de la Comisión Europea (JRC) con radiación satelital SARAH-2 para estimación de producción fotovoltaica real en autoconsumo (`calcular_produccion_fotovoltaica_pvgis`).
 
----
+#### 🧪 4. Ensayos Oficiales y Auditoría de Campo (RD 390/2021)
+* **Registro de Visita Presencial In Situ:** Justificación del cumplimiento estricto del Art. 8 del RD 390/2021 para el Anexo IV obligatorio (`registrar_visita_presencial`).
+* **Ensayo de Hermeticidad Blower Door (UNE-EN ISO 9972):** Registro y cálculo de la tasa de renovación de aire $n_{50}$ y permeabilidad $q_{50}$ con diagnóstico de hermeticidad (`registrar_ensayo_estanqueidad_blower_door`).
+* **Ensayo de Flujometría Térmica In Situ (UNE-EN ISO 9869-1):** Determinación experimental de la transmitancia real $U$ de muros mediante sondas de flujo térmico y gradiente de temperatura para justificar el nivel conocido de envolvente (`registrar_ensayo_flujometria_termica_in_situ`).
+* **Contraste de Facturación Real vs Modelo:** Verificación de calibración del modelo energético contra consumos reales de electricidad, gas y gasóleo (`contrastar_consumo_facturas_reales`).
 
-### Versión 1.2.0 — 16/10/2026: 🚀 Arquitectura de 5 Carpetas, Auto-Organizador y Ecosistema de Visita
+#### 🌿 5. Medidas de Mejora y Dictámenes NextGen EU (RD 853/2021)
+* **Paquetes Oficiales de Rehabilitación Energética:** Generación automática de 3 paquetes del RD 390/2021 (Envolvente SATE, Aerotermia y Solución Integral con Fotovoltaica) con cálculo de ahorro %, nuevo salto de letra (hasta letra A), inversión estimada y amortización (payback) (`proponer_medidas_mejora_rd390`).
+* **Dictamen Justificativo de Ayudas Públicas e IRPF:** Acreditación del cumplimiento del umbral mínimo del 30% de reducción en energía primaria no renovable para la tramitación de subvenciones NextGen (RD 853/2021) en sus tramos del 40%, 65% y 80%, y deducciones del 40%/60% en IRPF (`emitir_dictamen_subvenciones_nextgen`).
 
-* **📁 Arquitectura Estándar de 5 Subcarpetas para Cada Inmueble:**
-  Estructuración canónica y profesional del directorio de visita en:
-  - `INFORMACION/`: Notas de visita, Referencia Catastral, apuntes, datos del cliente y extractos de Catastro.
-  - `PLANOS/`: Planos arquitectónicos de distribución (PDF), croquis acotados y modelos BIM (IFC/DWG).
-  - `FOTOS/`: Fotografías generales del inmueble (fachada exterior, carpinterías/ventanas, vistas y sombras).
-  - `INSTALACIONES/`: Fotos de placas de características de calderas, termos, bombas de calor y fichas técnicas.
-  - `CERTIFICADO/`: Carpeta oficial de salida exclusiva para los entregables finales.
-* **🧹 Auto-Organizador Inteligente (`organizar_carpeta_visita`):** Herramienta que clasifica y mueve automáticamente archivos sueltos depositados en la raíz o en carpetas no estándar hacia sus 5 subcarpetas correspondientes, generando además la ficha guía `LEEME_ESTRUCTURA_VISITA.txt`.
-* **🤖 Protocolo de Primer Contacto con la IA:** Configuración de directivas en FastMCP para que lo primero que pregunte el asistente sea la ubicación de la carpeta de visita en el equipo local del usuario.
-* **🏷️ Detección Inteligente de Equipos por Nombre de Foto:** Ingesta automática de tecnología, potencia y combustible a partir de los nombres de fotos depositadas en `INSTALACIONES/` (ej. calderas de condensación, bombas de calor, termos).
-
----
-
-### Versión 1.1.0 — 16/10/2026: 🎯 Subcarpeta `CERTIFICADO/` y Generación Total de Entregables Oficiales
-
-* **📦 Subcarpeta Oficial Automatizada `CERTIFICADO/`:** Creación automática y directa dentro de la carpeta del inmueble de un directorio limpio y exclusivo con todos los entregables generados:
-  - `Proyecto_CE3X.cex`: Archivo nativo editable para CE3X v3.2.
-  - `Certificado_Oficial_Registro.xml`: XML oficial v3.0 validado contra el esquema RelaxNG del Ministerio.
-  - `Informe_Certificacion_Energetica.pdf`: Certificado oficial de 15 páginas compilado con Typst / `xml2cert.exe`.
-  - `Informe_Medidas_Mejora_NextGen.pdf`: Dictamen técnico de medidas de mejora del RD 390/2021 y subvenciones NextGen (RD 853/2021) maquetado en PDF (PyMuPDF).
-  - `Informe_Medidas_Mejora_NextGen.md`: Dictamen técnico completo en formato Markdown editable.
-  - `RESUMEN_ENTREGA.txt`: Ficha resumen ejecutivo con letra energética, emisiones de CO2 y ayudas públicas estimadas.
-* **⚡ Auditoría y Certificación de Extremo a Extremo:** Herramienta `@mcp.tool() certificar_desde_carpeta_visita` operativa al 100%.
-
----
-
-### Versión 1.0.0 — 16/10/2026: 🚀 Hito Mayor: Servidor FastMCP y Compatibilidad CEX 100% Verificada
-
-* **🟢 Compatibilidad Binaria Perfecta de Proyectos .CEX:**
-  - Descubrimiento e ingeniería inversa del formato nativo CE3X (Python 2.7 congelado + serialización `pickle` protocol 0 con memoization deduplicada).
-  - Corrección de codificación estricta en Latin-1 / CP1252 (`\xf1` para la letra `ñ`) para evitar fallos de decodificación en Cython.
-  - Verificación exitosa en vivo en la interfaz de CE3X v3.2 de 3 proyectos reales generados (`Proyecto_1_RuaReal.cex`, `Proyecto_2_PlazaLugo.cex`, `Proyecto_3_CantonGrande.cex`).
-* **🏛️ Catálogo Oficial de Arquetipos Constructivos Españoles (`libraries.py`):**
-  - Inferencia automática de transmitancias térmicas $U$ de fachadas, cubiertas y huecos según el año de construcción y normativa vigente (Anterior a 1979, NBE-CT-79, CTE 2006, CTE 2013, CTE 2019 nZEB).
-  - Catálogos de vidrios (simple, doble estándar, doble bajo emisivo) y marcos (madera, metálico sin RPT, aluminio con RPT, PVC).
-* **🌐 Conectividad Oficial con Catastro de España:** Consulta telemática de la Sede Electrónica de Catastro vía OVS a partir de la Referencia Catastral (20 caracteres en territorio común o 29 en foral).
-* **☀️ Integración Satelital PVGIS de la Comisión Europea:** Estimación de producción fotovoltaica en tiempo real con datos de radiación satelital oficial.
-* **💶 Motor de Medidas de Mejora RD 390/2021 y Subvenciones NextGen (RD 853/2021):**
-  - Cálculo de ahorro en Energía Primaria no Renovable (EPnr) y emisiones de CO2.
-  - Determinación de tramos de subvención del 40%, 65% u 80% (hasta 18.800 € por vivienda) y deducciones en el IRPF del 40% y 60%.
-* **📐 Extracción de Planos PDF y Modelos BIM IFC:** Extracción de superficies de recintos y cálculo de envolvente con IfcOpenShell y PyMuPDF.
-
----
-
-*Jose Manuel Caamaño González | Arquitecto Técnico & BIM Manager*  
-*A Coruña, Galicia. Hecho con código y café. ☕*
+#### 📁 6. Arquitectura Canónica de Visita y Ecosistema de Despliegue
+* **Estructura Estándar de 5 Carpetas:** Organización profesional de los archivos del inmueble en `INFORMACION/`, `PLANOS/`, `FOTOS/`, `INSTALACIONES/` y `CERTIFICADO/`.
+* **Auto-Organizador Inteligente:** Clasificación automática de archivos sueltos depositados en la raíz hacia sus subcarpetas correspondientes (`organizar_carpeta_visita`), auditoría asistida (`auditar_carpeta_visita`) y generación integral de entregables en la subcarpeta `CERTIFICADO/` (`certificar_desde_carpeta_visita`).
+* **Firma y Perfil Técnico Colegial Persistente:** Almacenamiento seguro en `~/.ce3x_mcp_perfil_tecnico.json` para autorrellenado de credenciales del técnico en todos los documentos generados (`configurar_perfil_tecnico_colegiado`).
+* **Instalador Automático de 1 Clic para Windows:** Script autoejecutable [`instalar_en_claude_desktop.bat`](./instalar_en_claude_desktop.bat) para inyección inmediata en Claude Desktop y Cursor.
+* **Paquete Oficial en PyPI:** Disponible en el Python Package Index (`pip install ce3x-mcp-server`) y ejecutable instantáneamente sin instalación previa con `uvx --from ce3x-mcp-server ce3x-mcp`.
+* **Ecosistema Multimodelo de Skills:** Manuales operativos y directivas de razonamiento adaptadas a los estándares de Google Gemini, Anthropic Claude y OpenAI GPT.
+* **Batería de Pruebas y Validación (100% Passed):** Suite de 9 pruebas de integración y 7 matrices de escenarios (muros, HVAC, orientaciones, sombras, ventanas ISO 10077, ACS HE4 y ayudas públicas) totalmente verificada.
