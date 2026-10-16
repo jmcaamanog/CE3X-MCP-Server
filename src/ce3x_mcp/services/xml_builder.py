@@ -203,8 +203,12 @@ def generar_xml_oficial_30(
         cert.find("NombreApellidos").text = getattr(adm, "nombre_tecnico", None) or "Técnico Certificador Colegiado"
         tit = getattr(adm, "titulacion_tecnico", None) or getattr(adm, "titulacion", None) or "Arquitectura técnica o aparejadores"
         cert.find("Titulacion").text = normalizar_titulacion(tit)
-        cert.find("Municipio").text = adm.municipio or "Municipio"
-        cert.find("Provincia").text = provincia_norm
+        
+        mun_tec = getattr(adm, "municipio_tecnico", None) or adm.municipio or "A Coruña"
+        cert.find("Municipio").text = mun_tec
+        
+        prov_tec = getattr(adm, "provincia_tecnico", None) or adm.provincia or "Coruña, A"
+        cert.find("Provincia").text = normalizar_provincia(prov_tec)
         cert.find("ComunidadAutonoma").text = ccaa_norm
         
         nif_node = cert.find("Nif")
@@ -215,14 +219,19 @@ def generar_xml_oficial_30(
         if dom_node is not None:
             dom_node.text = getattr(adm, "domicilio_tecnico", None) or adm.direccion or "Despacho Profesional de Certificación"
             
+        cp_node = cert.find("CodigoPostal")
+        if cp_node is not None:
+            cp_node.text = getattr(adm, "codigo_postal_tecnico", None) or getattr(adm, "codigo_postal", None) or "15001"
+            
         email_node = cert.find("Email")
         if email_node is not None:
             email_node.text = getattr(adm, "email_tecnico", None) or "tecnico@certificador.es"
             
         tel_node = cert.find("Telefono")
         if tel_node is not None:
-            tel_node.text = getattr(adm, "telefono_tecnico", None) or "900000000"
-
+            raw_tel = getattr(adm, "telefono_tecnico", None) or "981000000"
+            digits = re.sub(r"\D", "", str(raw_tel))
+            tel_node.text = (digits if len(digits) == 9 else digits[:9].ljust(9, "0")) if digits else "981000000"
         # Purgar o asignar RazonSocial y NifEntidad
         rs = cert.find("RazonSocial")
         razon_val = getattr(adm, "razon_social", None)

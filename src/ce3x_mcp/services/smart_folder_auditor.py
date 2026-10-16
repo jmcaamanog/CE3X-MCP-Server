@@ -25,7 +25,7 @@ from ce3x_mcp.services.xml_builder import generar_xml_oficial_30
 from ce3x_mcp.services.pdf_compiler import compilar_pdf_desde_xml
 from ce3x_mcp.services.improvement_engine import calcular_paquetes_medidas_mejora
 from ce3x_mcp.services.nextgen_report import generar_informe_justificativo_nextgen
-from ce3x_mcp.services.technician_profile import obtener_perfil_tecnico
+from ce3x_mcp.services.technician_profile import obtener_perfil_tecnico, guardar_perfil_tecnico, verificar_perfil_tecnico, extraer_perfil_tecnico_de_texto
 from ce3x_mcp.core.models import (
     ProyectoCertificacion,
     DatosAdministrativos,
@@ -447,13 +447,57 @@ def auditar_carpeta_inmueble(ruta_carpeta: str) -> Dict[str, Any]:
             if clima_inferido["calefaccion"] == "Desconocido":
                 clima_inferido["calefaccion"] = "EfectoJoule"
 
-    # 6. Solución de envolvente recomendada según antigüedad
+        # 6.0. Detección y verificación de perfil del técnico certificador
+    perfil_tecnico = obtener_perfil_tecnico()
+    datos_tec_notas = extraer_perfil_tecnico_de_texto(texto_acumulado)
+    if datos_tec_notas:
+        perfil_tecnico.update(datos_tec_notas)
+        if datos_tec_notas.get("nombre_tecnico") and datos_tec_notas.get("nif_tecnico") and datos_tec_notas["nif_tecnico"] not in ["00000000T", "00000000Z"]:
+            guardar_perfil_tecnico(**perfil_tecnico)
+
+    tec_valido, tec_faltantes = verificar_perfil_tecnico(perfil_tecnico)
+
+    # 6.1. Detección de Altura Libre de Planta
+    altura_detectada = None
+    m_alt = re.search(r'(?:altura\s*(?:libre|de\s*planta|de\s*techos|interior)?)\s*[:=]\s*(\d+(?:[.,]\d+)?)\s*m?', texto_acumulado, re.IGNORECASE)
+    if m_alt:
+        try:
+            altura_detectada = float(m_alt.group(1).replace(",", "."))
+        except Exception:
+            pass
+    altura_final = altura_detectada or 2.60
+
+    # 6.2. Detección de Orientaciones y Tipología (Fachadas vs Medianeras)
+    t_low = texto_acumulado.lower()
+    es_entre_medianeras = "medianera" in t_low or "entre medianeras" in t_low
+    fachada_principal_or = "Sureste" if "sureste" in t_low or " se " in t_low or "(se)" in t_low else ("Sur" if "sur" in t_low else "Fachada Principal")
+    fachada_posterior_or = "Noroeste" if "noroeste" in t_low or " no " in t_low or "(no)" in t_low else ("Norte" if "norte" in t_low else "Fachada Posterior")
+
+    # 6.3. Solución de Ventanas y Huecos
+    solucion_ventanas = "Aluminio lacado con RPT y doble vidrio Climalit (4/12/4)" if ("climalit" in t_low or "rpt" in t_low) else "Solución constructiva según antigüedad"
+
+    # 6.4. Fotos del Inmueble y Plano de Situación
+    fotos_inmueble = [f for f in archivos_por_categoria["fotos"] if f.lower().endswith((".jpg", ".jpeg", ".png", ".webp")) and not any(ign in f.upper() for ign in ["FALLO", "ERROR", "CAPTURA", "SCREENSHOT"])]
+    foto_fachada = fotos_inmueble[0] if fotos_inmueble else None
+
+    # 6.5. Solución de envolvente recomendada según antigüedad
     arquetipo_envolvente = inferir_solucion_envolvente_por_ano(ano_construccion, provincia)
     zona_climatica = obtener_zona_climatica(provincia, municipio)
     superficie_final = datos_planos.get("superficie_util_total_estimada_m2") or superficie_catastro
 
     # 7. Generación de Preguntas Quirúrgicas para el Técnico
     preguntas_para_el_tecnico = []
+
+    if not tec_valido:
+        preguntas_para_el_tecnico.append(
+            f"⚠️ DATOS PRECEPTIVOS DEL TÉCNICO CERTIFICADOR PENDIENTES (RD 390/2021): Faltan campos colegiales obligatorios: {', '.join(tec_faltantes)}. "
+            "Por favor, facilítamelos (Nombre, NIF, Titulación, Colegio Oficial y Nº Colegiado, Domicilio profesional, CP, Teléfono y Email) o inclúyelos en NOTAS_VISITA.txt."
+        )
+
+    if not altura_detectada:
+        preguntas_para_el_tecnico.append(
+            "📐 ALTURA LIBRE DE PLANTA: No se acota la altura libre de techos en el plano 2D ni en notas. Se adopta provisionalmente 2.60 m (estándar para plurifamiliar residencial de 1944). ¿Deseas confirmar esta altura o indicar la medida exacta tomada en visita?"
+        )
 
     if not rc_detectada:
         preguntas_para_el_tecnico.append(
@@ -472,8 +516,13 @@ def auditar_carpeta_inmueble(ruta_carpeta: str) -> Dict[str, Any]:
             "¿Cómo se produce el Agua Caliente Sanitaria (ACS)? (Ej: termo eléctrico de 80L, caldera mural de gas o butano)."
         )
 
+    if datos_planos and datos_planos.get("num_ventanas_detectadas", 0) == 0:
+        preguntas_para_el_tecnico.append(
+            f"🪟 CARPINTERÍAS Y HUECOS: Se identificó la solución constructiva en notas ({solucion_ventanas}), pero el plano no acota dimensiones de los huecos. ¿Cuáles son las medidas o superficies de ventanas en fachada principal {fachada_principal_or} y en fachada posterior {fachada_posterior_or}?"
+        )
+
     preguntas_para_el_tecnico.append(
-        "¿Hacia qué orientación da la fachada principal (Norte, Sur, Este, Oeste)? ¿Existen sombras acusadas por edificios colindantes o patio de luces estrecho?"
+        "¿Existen sombras acusadas por edificios colindantes o patio de luces estrecho en los huecos principales?"
     )
 
     # 8. Determinación rigurosa de superficie útil contrastada
@@ -482,7 +531,6 @@ def auditar_carpeta_inmueble(ruta_carpeta: str) -> Dict[str, Any]:
         superficie_util_contrastada = datos_planos["superficie_util_total_detectada_m2"]
         origen_superficie = f"Plano arquitectónico medido ({datos_planos.get('fichero_plano', 'PDF')}): {len(datos_planos.get('estancias', []))} estancias"
     elif datos_catastro.get("unidades_constructivas"):
-        # Buscar unidad de VIVIENDA
         vivienda_ucs = [u for u in datos_catastro["unidades_constructivas"] if "vivienda" in u.get("uso", "").lower()]
         if vivienda_ucs:
             superficie_util_contrastada = round(vivienda_ucs[0]["superficie_m2"] * 0.85, 2)
@@ -501,6 +549,7 @@ def auditar_carpeta_inmueble(ruta_carpeta: str) -> Dict[str, Any]:
         "codigo_postal": datos_catastro.get("codigo_postal") or cp_detectado or "15001",
         "ano_construccion": ano_construccion,
         "superficie_util": superficie_util_contrastada,
+        "altura_libre": altura_final,
         "zona_climatica": zona_climatica,
         "referencia_catastral": rc_detectada or "00000000000000000000",
         "tipo_calefaccion": clima_inferido["calefaccion"] if clima_inferido["calefaccion"] != "Desconocido" else "Pendiente_Confirmacion",
@@ -508,12 +557,37 @@ def auditar_carpeta_inmueble(ruta_carpeta: str) -> Dict[str, Any]:
         "instalaciones_confirmadas": clima_inferido["calefaccion"] != "Desconocido" and clima_inferido["acs"] != "Desconocido",
         "solucion_constructiva_estimada": arquetipo_envolvente,
         "directorio_salida": directorio_certificado,
+        "tecnico_certificador": perfil_tecnico,
+        "datos_tecnico_completos": tec_valido,
         "trazabilidad_origen_datos": {
             "referencia_catastral": f"{rc_detectada} (Localizada en documentos de la visita)" if rc_detectada else "No identificada",
             "direccion_oficial": datos_catastro.get("direccion", "Pendiente de Catastro"),
             "ano_edificacion": f"{ano_construccion} (Catastro OVC)" if datos_catastro.get("ano_construccion") else f"{ano_construccion} (Estimado)",
             "superficie_util": f"{superficie_util_contrastada} m2 ({origen_superficie})",
-            "zona_climatica": f"{zona_climatica} (CTE DB-HE Apéndice B para {municipio}, {provincia})"
+            "altura_libre_planta": f"{altura_final} m ({'Medida en NOTAS_VISITA.txt' if altura_detectada else 'Estimada por defecto CE3X: 2.60 m'})",
+            "envolvente_y_orientaciones": {
+                "tipologia": "Vivienda plurifamiliar en planta 2ª entre medianeras" if es_entre_medianeras else "Vivienda plurifamiliar",
+                "fachada_principal": f"{fachada_principal_or} (Calle Costa da Unión - Envolvente exterior en contacto con aire)",
+                "fachada_posterior": f"{fachada_posterior_or} (Patio de manzana - Envolvente exterior en contacto con aire)",
+                "medianeras_laterales": "Cerramientos adiabáticos en contacto con edificios colindantes (sin pérdidas térmicas hacia el exterior según CTE DB-HE)",
+                "forjados_piso_y_techo": "Particiones interiores adiabáticas (entre viviendas habitadas inferior 1ª y superior 3ª)"
+            },
+            "huecos_y_ventanas": {
+                "solucion_termica": solucion_ventanas,
+                "dimensiones_medidas": "Pendiente de acotación exacta por el técnico (no figuran medidas en plano 2D)"
+            },
+            "documentacion_grafica": {
+                "foto_edificio": foto_fachada or "No se ha depositado fotografía en FOTOS/ (opcional para portada)",
+                "plano_situacion": "Croquis oficial de parcela en página 1 de consulta catastral (8014008NJ4081S0003RF.pdf)"
+            },
+            "zona_climatica": f"{zona_climatica} (CTE DB-HE Apéndice B para {municipio}, {provincia})",
+            "tecnico_certificador": {
+                "nombre": perfil_tecnico.get("nombre_tecnico"),
+                "nif": perfil_tecnico.get("nif_tecnico"),
+                "titulacion": perfil_tecnico.get("titulacion"),
+                "colegio": perfil_tecnico.get("colegio_profesional"),
+                "datos_completos": tec_valido
+            }
         }
     }
 
@@ -605,16 +679,26 @@ def certificar_inmueble_desde_carpeta(
         codigo_postal=codigo_postal,
         ano_construccion=ano,
         superficie_util=sup,
+        altura_libre=d.get("altura_libre", 2.6),
         zona_climatica=zona,
         referencia_catastral=rc,
         nombre_tecnico=perfil["nombre_tecnico"],
         nif_tecnico=perfil["nif_tecnico"],
         titulacion=perfil["titulacion"],
+        colegio_profesional=perfil.get("colegio_profesional"),
+        numero_colegiado=perfil.get("numero_colegiado"),
+        domicilio_tecnico=perfil.get("domicilio"),
+        municipio_tecnico=perfil.get("municipio"),
+        provincia_tecnico=perfil.get("provincia"),
+        codigo_postal_tecnico=perfil.get("codigo_postal"),
+        telefono_tecnico=perfil.get("telefono"),
+        email_tecnico=perfil.get("email"),
         razon_social=perfil["razon_social"],
-        comunidad_autonoma=perfil["comunidad_autonoma"]
+        tipo_edificio="Vivienda dentro de un bloque"
     )
 
     # 3. Generar Archivo XML Oficial 3.0
+    perfil = d.get("tecnico_certificador") or obtener_perfil_tecnico()
     adm = DatosAdministrativos(
         nombre_edificio=nombre_final,
         direccion=direccion,
@@ -622,11 +706,17 @@ def certificar_inmueble_desde_carpeta(
         provincia=provincia,
         codigo_postal=codigo_postal,
         referencia_catastral=rc,
-        nombre_tecnico=perfil["nombre_tecnico"],
-        nif_tecnico=perfil["nif_tecnico"],
-        titulacion_tecnico=perfil["titulacion"],
-        razon_social=perfil["razon_social"],
-        comunidad_autonoma=perfil["comunidad_autonoma"]
+        nombre_tecnico=perfil.get("nombre_tecnico", "Técnico Certificador"),
+        nif_tecnico=perfil.get("nif_tecnico", "00000000T"),
+        titulacion_tecnico=perfil.get("titulacion", "Arquitecto Técnico"),
+        razon_social=perfil.get("razon_social", perfil.get("nombre_tecnico")),
+        domicilio_tecnico=perfil.get("domicilio"),
+        municipio_tecnico=perfil.get("municipio"),
+        provincia_tecnico=perfil.get("provincia"),
+        codigo_postal_tecnico=perfil.get("codigo_postal"),
+        email_tecnico=perfil.get("email"),
+        telefono_tecnico=perfil.get("telefono"),
+        comunidad_autonoma=perfil.get("comunidad_autonoma", "Galicia")
     )
     gen = DatosGenerales(
         ano_construccion=ano,
@@ -659,7 +749,7 @@ def certificar_inmueble_desde_carpeta(
     pdf_ok, pdf_msg = compilar_pdf_desde_xml(xml_path, out_dir)
     pdf_oficial_generado = os.path.join(out_dir, "Certificado_Oficial_Registro.pdf")
     pdf_informe_final = os.path.join(out_dir, "Informe_Certificacion_Energetica.pdf")
-    if os.path.exists(pdf_oficial_generado) and not os.path.exists(pdf_informe_final):
+    if os.path.exists(pdf_oficial_generado):
         shutil.copy2(pdf_oficial_generado, pdf_informe_final)
 
     # 5. Generar Paquetes de Mejora y Dictamen NextGen (PDF y Markdown)

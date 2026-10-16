@@ -17,6 +17,9 @@ class DatosAdministrativos(BaseModel):
     domicilio_tecnico: Optional[str] = "Despacho Profesional"
     email_tecnico: Optional[str] = "tecnico@certificador.es"
     telefono_tecnico: Optional[str] = "900000000"
+    municipio_tecnico: Optional[str] = "A Coruña"
+    provincia_tecnico: Optional[str] = "A Coruña"
+    codigo_postal_tecnico: Optional[str] = "15001" 
 
 class DatosGenerales(BaseModel):
     tipologia: Literal["Unifamiliar", "Bloque", "ViviendaBloque", "PequenoTerciario", "GranTerciario"] = "ViviendaBloque"

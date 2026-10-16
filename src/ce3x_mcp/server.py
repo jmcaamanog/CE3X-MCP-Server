@@ -596,12 +596,18 @@ def configurar_perfil_tecnico_colegiado(
     colegio_profesional: Optional[str] = None,
     numero_colegiado: Optional[str] = None,
     razon_social: Optional[str] = None,
+    domicilio: Optional[str] = None,
+    municipio: Optional[str] = None,
+    provincia: Optional[str] = None,
+    codigo_postal: Optional[str] = None,
+    telefono: Optional[str] = None,
+    email: Optional[str] = None,
     comunidad_autonoma: str = "Galicia"
 ) -> Dict[str, Any]:
     """
-    Configura y guarda de forma persistente los datos colegiales del técnico certificador.
+    Configura y guarda de forma persistente los datos colegiales y profesionales del técnico certificador.
     Se inyectarán automáticamente en todos los proyectos .cex, archivos XML oficiales v3.0
-    y documentos PDF generados.
+    y documentos PDF generados cumpliendo estrictamente con el RD 390/2021.
     """
     return guardar_perfil_tecnico(
         nombre_tecnico=nombre_tecnico,
@@ -610,6 +616,12 @@ def configurar_perfil_tecnico_colegiado(
         colegio_profesional=colegio_profesional,
         numero_colegiado=numero_colegiado,
         razon_social=razon_social,
+        domicilio=domicilio,
+        municipio=municipio,
+        provincia=provincia,
+        codigo_postal=codigo_postal,
+        telefono=telefono,
+        email=email,
         comunidad_autonoma=comunidad_autonoma
     )
 
