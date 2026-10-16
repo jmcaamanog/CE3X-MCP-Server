@@ -1,0 +1,32 @@
+﻿# Gitignore para CE3X-MCP-Server
+
+# Regla global obligatoria - Notas internas de trabajo
+NOTAS/
+
+# Entornos virtuales de Python
+.venv/
+venv/
+env/
+ENV/
+
+# Bytecode y cachés de Python
+__pycache__/
+*.py[cod]
+*.class
+*.pyd
+
+# Distribución y empaquetado
+dist/
+build/
+*.egg-info/
+
+# Archivos de depuración y logs
+*.log
+scratch/
+output/
+temp/
+
+# IDEs
+.vscode/
+.idea/
+*.swp

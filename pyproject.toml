@@ -1,0 +1,61 @@
+﻿[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ce3x-mcp-server"
+version = "0.1.0"
+description = "Servidor MCP Oficial para Certificación de Eficiencia Energética de Edificios (CE3X / CTE DB-HE / RD 390/2021)"
+readme = "README.md"
+requires-python = ">=3.10"
+license = { text = "MIT" }
+authors = [
+    { name = "Jose Manuel Caamaño González", email = "jmc@example.com" }
+]
+keywords = [
+    "mcp",
+    "model-context-protocol",
+    "ce3x",
+    "eficiencia-energetica",
+    "cte-db-he",
+    "contech",
+    "bim",
+    "certificacion-energetica",
+    "typst"
+]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: Developers",
+    "Intended Audience :: End Users/Desktop",
+    "Topic :: Scientific/Engineering",
+    "License :: OSI Approved :: MIT License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "fastmcp>=0.4.0",
+    "pydantic>=2.6.0",
+    "lxml>=5.1.0",
+    "requests>=2.31.0",
+    "pymupdf>=1.24.0",
+    "shapely>=2.0.0",
+    "rich>=13.7.0"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "black>=24.0.0",
+    "ruff>=0.3.0"
+]
+bim = [
+    "ifcopenshell>=0.7.0"
+]
+
+[project.scripts]
+ce3x-mcp = "ce3x_mcp.server:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
