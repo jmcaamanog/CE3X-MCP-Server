@@ -1,5 +1,5 @@
 ﻿from fastmcp import FastMCP
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 import os
 import tempfile
 
@@ -22,6 +22,9 @@ from ce3x_mcp.services.cte_climate import (
 from ce3x_mcp.services.xml_builder import generar_xml_oficial_30
 from ce3x_mcp.services.pdf_compiler import compilar_pdf_desde_xml
 from ce3x_mcp.services.cex_codec import guardar_fichero_cex_basico
+from ce3x_mcp.services.bim_parser import extraer_envolvente_desde_ifc
+from ce3x_mcp.services.equipment_parser import analizar_datos_equipo_climatizacion
+from ce3x_mcp.services.improvement_engine import calcular_paquetes_medidas_mejora
 
 # Instancia oficial del servidor FastMCP
 mcp = FastMCP(
@@ -71,16 +74,13 @@ def calcular_calificacion_energetica(
     Calcula la demanda energética estimada, consumo de energía primaria no renovable,
     emisiones de CO2 y asigna las letras de calificación energética (A a G).
     """
-    # Estimación de balance según normativa
     trans = estimar_transmitancias_por_ano(ano_construccion, zona_climatica)
     
-    # Demanda de calefacción en función de U y zona climática
     factor_zona = 1.4 if zona_climatica.startswith("D") else (1.8 if zona_climatica.startswith("E") else 1.0)
     demanda_cal = trans["u_fachada"] * 45.0 * factor_zona
     demanda_ref = 15.0 if not zona_climatica.endswith("4") else 30.0
     demanda_acs = 22.0
     
-    # Rendimiento según tecnología
     rend_cal = 3.2 if "aerotermia" in tipo_calefaccion.lower() else (0.92 if "condensacion" in tipo_calefaccion.lower() else 1.0)
     rend_acs = 2.8 if "aerotermia" in tipo_acs.lower() else (0.85 if "gas" in tipo_acs.lower() else 1.0)
     
@@ -94,7 +94,6 @@ def calcular_calificacion_energetica(
     ep_nr = cons_final_total * fp["f_ep_nr"]
     co2 = cons_final_total * fp["f_co2"]
     
-    # Asignación de letras según emisiones (referencia residencial en zona C/D)
     if co2 < 8.0:
         letra = "A"
     elif co2 < 14.0:
@@ -119,6 +118,75 @@ def calcular_calificacion_energetica(
         "calificacion_global_emisiones": letra,
         "calificacion_global_energia_primaria": letra,
         "vector_energetico_principal": vector
+    }
+
+@mcp.tool()
+def analizar_modelo_bim_ifc(ifc_path: str) -> Dict[str, Any]:
+    """
+    Abre y analiza un modelo BIM IFC (IFC2X3 o IFC4) mediante IfcOpenShell, extrayendo
+    las superficies útiles de estancias (IfcSpace), muros de fachada exterior (IfcWall)
+    y carpinterías exteriores (IfcWindow/IfcDoor) para su integración en CE3X.
+    """
+    return extraer_envolvente_desde_ifc(ifc_path)
+
+@mcp.tool()
+def analizar_ficha_equipo_clima(descripcion_o_ficha: str) -> Dict[str, Any]:
+    """
+    Analiza la descripción o texto de la ficha técnica de un equipo térmico
+    (aerotermia, caldera de condensación, bomba de calor, termo) y extrae su potencia,
+    rendimiento estacional (SCOP/COP/SEER) y vector energético para CE3X.
+    """
+    return analizar_datos_equipo_climatizacion(descripcion_o_ficha)
+
+@mcp.tool()
+def proponer_medidas_mejora_rd390(
+    superficie_util: float,
+    ano_construccion: int,
+    zona_climatica: str = "C1",
+    tipo_calefaccion: str = "EfectoJoule",
+    tipo_acs: str = "EfectoJoule"
+) -> Dict[str, Any]:
+    """
+    Genera automáticamente los 3 paquetes de medidas de mejora exigidos por el Real Decreto 390/2021
+    (Envolvente SATE + Carpinterías, Aerotermia y Solución Integral con Fotovoltaica),
+    calculando la inversión estimada (€), el ahorro en factura (€/año), la nueva letra energética y el retorno (payback).
+    """
+    calc = calcular_calificacion_energetica(
+        superficie_util=superficie_util,
+        ano_construccion=ano_construccion,
+        zona_climatica=zona_climatica,
+        tipo_calefaccion=tipo_calefaccion,
+        tipo_acs=tipo_acs
+    )
+    adm = DatosAdministrativos(
+        nombre_edificio="Inmueble",
+        direccion="Calle",
+        municipio="Municipio",
+        provincia="Provincia",
+        codigo_postal="00000"
+    )
+    gen = DatosGenerales(
+        ano_construccion=ano_construccion,
+        zona_climatica=zona_climatica,
+        superficie_util=superficie_util
+    )
+    res = ResultadoCalificacion(
+        demanda_calefaccion=calc["demanda_calefaccion_kwh_m2a"],
+        demanda_refrigeracion=calc["demanda_refrigeracion_kwh_m2a"],
+        demanda_acs=calc["demanda_acs_kwh_m2a"],
+        consumo_energia_primaria_nr=calc["consumo_energia_primaria_nr_kwh_m2a"],
+        emisiones_co2=calc["emisiones_co2_kg_m2a"],
+        letra_global_emisiones=calc["calificacion_global_emisiones"],
+        letra_global_energia_primaria=calc["calificacion_global_energia_primaria"],
+        letra_calefaccion=calc["calificacion_global_emisiones"],
+        letra_refrigeracion="A",
+        letra_acs=calc["calificacion_global_emisiones"]
+    )
+    proyecto = ProyectoCertificacion(administrativos=adm, generales=gen)
+    medidas = calcular_paquetes_medidas_mejora(proyecto, res)
+    return {
+        "calificacion_actual": calc,
+        "medidas_de_mejora": [m.model_dump() for m in medidas]
     }
 
 @mcp.tool()

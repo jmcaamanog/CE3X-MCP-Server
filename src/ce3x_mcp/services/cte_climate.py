@@ -109,3 +109,4 @@ def estimar_transmitancias_por_ano(ano: int, zona_climatica: str) -> Dict[str, f
         "u_hueco": U_DEFECTO_HUECO[norma]
     }
 
+

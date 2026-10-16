@@ -46,3 +46,4 @@ def consultar_catastro_por_rc(referencia_catastral: str) -> Dict[str, Any]:
             "error": f"Fallo al conectar con Catastro: {str(e)}"
         }
 
+

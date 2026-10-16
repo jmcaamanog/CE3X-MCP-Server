@@ -87,3 +87,4 @@ class ResultadoCalificacion(BaseModel):
     letra_refrigeracion: str
     letra_acs: str
 
+

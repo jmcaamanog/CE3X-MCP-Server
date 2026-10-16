@@ -119,3 +119,4 @@ def generar_xml_oficial_30(proyecto: ProyectoCertificacion, resultado: Resultado
     xml.append('</DatosEnergeticosDelEdificio>')
     return '\n'.join(xml)
 
+

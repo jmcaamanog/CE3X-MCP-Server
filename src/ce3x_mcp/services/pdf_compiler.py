@@ -53,3 +53,4 @@ def compilar_pdf_desde_xml(xml_path: str, output_dir: str, xml2cert_bin: Optiona
     except Exception as e:
         return False, f"Excepción al ejecutar xml2cert: {str(e)}"
 
+

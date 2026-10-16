@@ -58,3 +58,4 @@ def guardar_fichero_cex_basico(ruta_archivo: str, encabezado: str, admin_data: L
         p.dump(envolvente_data)
         p.dump(instalaciones_data)
 
+
