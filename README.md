@@ -46,7 +46,7 @@
 > Sigue estos 3 pasos inmediatos para tener la herramienta funcionando en 1 minuto:
 > 
 > 1. **Doble Clic al Instalador:** Haz doble clic sobre [`instalar_en_claude_desktop.bat`](./instalar_en_claude_desktop.bat) en la raíz del repositorio. Configurará Claude Desktop y Cursor automáticamente sin tocar nada de código.
-> 2. **Abre Claude Desktop o Cursor:** El servidor `ce3x` aparecerá conectado y listo para usar con sus **22 herramientas oficiales**.
+> 2. **Abre Claude Desktop o Cursor:** El servidor `ce3x` aparecerá conectado y listo para usar con sus **23 herramientas oficiales**.
 > 3. **Escribe en el chat:**  
 >    > *"Certifica la vivienda de la carpeta `ejemplos/visita_vivienda_ejemplo`"*  
 >    *(Verás cómo la IA organiza las fotos, planos y notas, y genera la carpeta `CERTIFICADO/` con los archivos oficiales).*
@@ -165,7 +165,7 @@ Y en tu archivo de configuración MCP indicas el intérprete local:
 
 ---
 
-## 🛠️ Catálogo Completo de 22 Herramientas MCP Disponibles
+## 🛠️ Catálogo Completo de 23 Herramientas MCP Disponibles
 
 El servidor implementa el mapeo total y exhaustivo de CE3X v3.2, manuales técnicos y normativas oficiales:
 
@@ -187,23 +187,24 @@ El servidor implementa el mapeo total y exhaustivo de CE3X v3.2, manuales técni
 ### 🧪 Ensayos Oficiales y Contraste de Consumos
 10. `registrar_ensayo_estanqueidad_blower_door(volumen, superficie, caudal_50pa)`: Ensayo Blower Door (UNE-EN ISO 9972) con cálculo de n50 y q50.
 11. `contrastar_consumo_facturas_reales(consumo_teorico, electricidad, gas, gasoleo)`: Contraste de facturación real vs modelo normativo.
+12. `registrar_ensayo_flujometria_termica_in_situ(flujo, temp_int, temp_ext, duracion)`: Ensayo in situ de flujometría térmica (UNE-EN ISO 9869-1) para determinar la transmitancia U real de muros.
 
 ### 💡 Rehabilitación y Subvenciones Públicas
-12. `proponer_medidas_mejora_rd390(...)`: Generación de paquetes de envolvente, equipos e hibridación con fotovoltaica.
-13. `emitir_dictamen_subvenciones_nextgen(...)`: Dictamen técnico oficial con tramos del 40%, 65%, 80% (RD 853/2021) e IRPF.
+13. `proponer_medidas_mejora_rd390(...)`: Generación de paquetes de envolvente, equipos e hibridación con fotovoltaica.
+14. `emitir_dictamen_subvenciones_nextgen(...)`: Dictamen técnico oficial con tramos del 40%, 65%, 80% (RD 853/2021) e IRPF.
 
 ### 📐 Envolvente, Sombras y Terciario
-14. `calcular_sombras_hueco(orientacion, ancho, alto, retranqueo, voladizo, toldo)`: Factor solar estacional F_sh para huecos según CTE DB-HE.
-15. `calcular_sombras_obstaculo_edificio_enfrente(distancia, altura, orientacion)`: Ángulo alfa y factor de sombra por edificio enfrente / obstáculo remoto.
-16. `calcular_parametros_terciario_local_comercial(tipo, m2, luminarias)`: Potencia de iluminación W/m², VEEI según DB-HE 3 y caudal RITE.
-17. `configurar_perfil_tecnico_colegiado(nombre, nif, titulacion, colegio)`: Registro persistente de la firma y credenciales del técnico.
+15. `calcular_sombras_hueco(orientacion, ancho, alto, retranqueo, voladizo, toldo)`: Factor solar estacional F_sh para huecos según CTE DB-HE.
+16. `calcular_sombras_obstaculo_edificio_enfrente(distancia, altura, orientacion)`: Ángulo alfa y factor de sombra por edificio enfrente / obstáculo remoto.
+17. `calcular_parametros_terciario_local_comercial(tipo, m2, luminarias)`: Potencia de iluminación W/m², VEEI según DB-HE 3 y caudal RITE.
+18. `configurar_perfil_tecnico_colegiado(nombre, nif, titulacion, colegio)`: Registro persistente de la firma y credenciales del técnico.
 
 ### 📂 Gestión Integral de Carpeta de Visita y Entregables
-18. `organizar_carpeta_visita(ruta_carpeta)`: Auto-organizador inteligente en 5 carpetas (INFORMACION, PLANOS, FOTOS, INSTALACIONES, CERTIFICADO).
-19. `auditar_carpeta_visita(ruta_carpeta)`: Escaneo autónomo multimodal de la visita y generación de preguntas quirúrgicas.
-20. `certificar_desde_carpeta_visita(ruta_carpeta, ...)`: Ciclo completo que genera todos los entregables en `CERTIFICADO/`.
-21. `calcular_calificacion_energetica(proyecto)`: Motor de cálculo simplificado de demandas, consumos y emisiones.
-22. `generar_certificado_completo(...)`: Pipeline integral que emite el `.cex` nativo, XML oficial v3.0 y PDF de 15 páginas.
+19. `organizar_carpeta_visita(ruta_carpeta)`: Auto-organizador inteligente en 5 carpetas (INFORMACION, PLANOS, FOTOS, INSTALACIONES, CERTIFICADO).
+20. `auditar_carpeta_visita(ruta_carpeta)`: Escaneo autónomo multimodal de la visita y generación de preguntas quirúrgicas.
+21. `certificar_desde_carpeta_visita(ruta_carpeta, ...)`: Ciclo completo que genera todos los entregables en `CERTIFICADO/`.
+22. `calcular_calificacion_energetica(proyecto)`: Motor de cálculo simplificado de demandas, consumos y emisiones.
+23. `generar_certificado_completo(...)`: Pipeline integral que emite el `.cex` nativo, XML oficial v3.0 y PDF de 15 páginas.
 
 ---
 

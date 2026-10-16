@@ -307,3 +307,43 @@ def estimar_parametros_terciario_comercial(
         "ocupantes_estimados": personas_estimadas,
         "caudal_ventilacion_exterior_m3h": caudal_total_m3h
     }
+
+
+def registrar_ensayo_flujometria_termica_iso9869(
+    flujo_medio_w_m2: float,
+    temp_interior_media_c: float,
+    temp_exterior_media_c: float,
+    duracion_ensayo_horas: float = 72.0,
+    elemento_analizado: str = "Fachada principal"
+) -> Dict[str, Any]:
+    """
+    Calcula la transmitancia termica real U (W/m2K) de un cerramiento a partir
+    de un ensayo in situ de flujometria termica con sondas de contacto segun norma UNE-EN ISO 9869-1.
+    Valido para justificar el nivel conocido de envolvente en CE3X y Anexo IV de RD 390/2021.
+    """
+    delta_t = abs(temp_interior_media_c - temp_exterior_media_c)
+    if delta_t < 5.0:
+        raise ValueError("El gradiente termico medio durante el ensayo debe ser de al menos 5 C para validez segun ISO 9869.")
+    if flujo_medio_w_m2 <= 0:
+        raise ValueError("El flujo de calor medio debe ser mayor que cero.")
+        
+    conductancia_superficial = flujo_medio_w_m2 / delta_t
+    resistencia_termica_cuerpo = 1.0 / conductancia_superficial
+    rsi_rse = 0.17
+    resistencia_total = resistencia_termica_cuerpo + rsi_rse
+    u_medido = round(1.0 / resistencia_total, 2)
+    
+    return {
+        "valido": True,
+        "norma_ensayo": "UNE-EN ISO 9869-1",
+        "elemento_analizado": elemento_analizado,
+        "duracion_horas": duracion_ensayo_horas,
+        "cumple_duracion_minima_72h": duracion_ensayo_horas >= 72.0,
+        "flujo_medio_w_m2": flujo_medio_w_m2,
+        "gradiente_temperatura_medio_c": round(delta_t, 1),
+        "conductancia_medida_w_m2k": round(conductancia_superficial, 3),
+        "resistencia_termica_total_m2k_w": round(resistencia_total, 3),
+        "u_medido_w_m2k": u_medido,
+        "nivel_ce3x": "Conocido (Ensayo in situ de flujometria)",
+        "texto_anexo_iv": f"Ensayo de flujometria termica in situ s/ UNE-EN ISO 9869-1 ({duracion_ensayo_horas}h) en {elemento_analizado}. Transmitancia medida U = {u_medido} W/m2K."
+    }

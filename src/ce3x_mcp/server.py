@@ -58,7 +58,8 @@ from ce3x_mcp.services.trials_and_tests import (
     contrastar_facturas_reales,
     calcular_sombras_estacionales_hueco,
     calcular_patron_sombras_edificio_colindante,
-    estimar_parametros_terciario_comercial
+    estimar_parametros_terciario_comercial,
+    registrar_ensayo_flujometria_termica_iso9869
 )
 from ce3x_mcp.services.technician_profile import guardar_perfil_tecnico, obtener_perfil_tecnico
 from ce3x_mcp.services.smart_folder_auditor import auditar_carpeta_inmueble, certificar_inmueble_desde_carpeta, organizar_carpeta_visita as organizar_carpeta_visita_impl
@@ -673,6 +674,29 @@ def calcular_parametros_terciario_local_comercial(
         superficie_util_m2=superficie_util_m2,
         tipo_luminaria=tipo_luminaria,
         nivel_iluminacion_lux=nivel_iluminacion_lux
+    )
+
+
+
+@mcp.tool()
+def registrar_ensayo_flujometria_termica_in_situ(
+    flujo_medio_w_m2: float,
+    temp_interior_media_c: float,
+    temp_exterior_media_c: float,
+    duracion_ensayo_horas: float = 72.0,
+    elemento_analizado: str = "Fachada principal"
+) -> Dict[str, Any]:
+    """
+    Registra formalmente un ensayo in situ de flujometria termica con termoflujometro y sondas de
+    contacto conforme a la norma UNE-EN ISO 9869-1, calculando la transmitancia termica U real
+    (W/m2K) del cerramiento para justificar el nivel conocido en CE3X y el Anexo IV del RD 390/2021.
+    """
+    return registrar_ensayo_flujometria_termica_iso9869(
+        flujo_medio_w_m2=flujo_medio_w_m2,
+        temp_interior_media_c=temp_interior_media_c,
+        temp_exterior_media_c=temp_exterior_media_c,
+        duracion_ensayo_horas=duracion_ensayo_horas,
+        elemento_analizado=elemento_analizado
     )
 
 @mcp.resource("ce3x://normativa/factores_paso")

@@ -18,7 +18,8 @@ from ce3x_mcp.services.trials_and_tests import (
     contrastar_facturas_reales,
     calcular_sombras_estacionales_hueco,
     calcular_patron_sombras_edificio_colindante,
-    estimar_parametros_terciario_comercial
+    estimar_parametros_terciario_comercial,
+    registrar_ensayo_flujometria_termica_iso9869
 )
 from ce3x_mcp.services.technician_profile import guardar_perfil_tecnico, obtener_perfil_tecnico
 from ce3x_mcp.services.libraries import inferir_solucion_envolvente_por_ano, CATALOGO_VIDRIOS
@@ -208,6 +209,11 @@ def test_trials_and_tests():
     assert terc["valido"] is True
     assert terc["cumple_cte_db_he3"] is True
     assert terc["potencia_iluminacion_w_m2"] == 9.0
+
+    # 9. Flujometria termica ISO 9869
+    flujo = registrar_ensayo_flujometria_termica_iso9869(flujo_medio_w_m2=15.0, temp_interior_media_c=20.0, temp_exterior_media_c=5.0)
+    assert flujo["valido"] is True
+    assert flujo["u_medido_w_m2k"] > 0.5
 
     print("[PASS] test_trials_and_tests (visita oficial, blower door, puentes termicos, facturas, sombras, obstaculo remoto, terciario y perfil tecnico)")
 
