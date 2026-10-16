@@ -267,7 +267,7 @@ El ecosistema **CE3X-MCP-Server** se estructura en cinco capas modulares diseña
 | :--- | :--- | :--- | :--- |
 | **Capa 1: Core Normativo & Cálculo** | Motor térmico reglamentario y enlaces oficiales | catastro.py, cte_climate.py, xml_builder.py, cex_codec.py | Sede Electrónica Catastro, Zonas Climáticas CTE DB-HE, XML oficial v3.0 RelaxNG y códec nativo .cex. |
 | **Capa 2: Orquestación FastMCP** | Exposición de herramientas, recursos y prompts | server.py, FastMCP, stdio / SSE transports | 11 MCP Tools de alta precisión, recursos de factores de paso IDAE y flujos guiados interactivos. |
-| **Capa 3: Ingesta Multimodal (Planos & BIM)** | Visión computacional y modelado digital | plan_parser.py, im_parser.py (PyMuPDF, IfcOpenShell) | Extracción de envolvente térmica desde planos PDF y extracción paramétrica nativa desde modelos IFC. |
+| **Capa 3: Ingesta Multimodal (Planos & BIM)** | Visión computacional y modelado digital | plan_parser.py, im_parser.py (PyMuPDF, IfcOpenShell) | Extracción de envolvente térmica desde planos PDF y extracción paramétrica nativa desde modelos IFC. |
 | **Capa 4: Auditoría Energética & Subvenciones** | Rehabilitación, energía solar y dictámenes | improvement_engine.py, pvgis_client.py, 
 extgen_report.py | Paquetes de mejora RD 390/2021, cálculo solar satelital PVGIS (JRC) y dictámenes oficiales NextGen RD 853/2021. |
 | **Capa 5: Generación Documental Homologada** | Salida gráfica y compilación ministerial | pdf_compiler.py, Typst / xml2cert.exe | Compilación instantánea del Certificado de Eficiencia Energética oficial de 15 páginas y anejos técnicos. |

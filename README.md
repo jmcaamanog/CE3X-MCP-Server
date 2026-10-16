@@ -15,6 +15,7 @@
 | :--- | :--- | :--- |
 | **Estudio de Conectores** | 🌐 **[Ver Estudio Integral de Conexiones](./docs/ESTUDIO_INTEGRAL_CONECTORES_CE3X_MCP.md)** | Mapeo pantalla a pantalla y botón a botón de CE3X a conectores de IA. |
 | **Documento de Análisis** | 📄 **[Ver Análisis CE3X & MCP](./docs/analisis_ce3x_mcp_framework.md)** | Análisis exhaustivo del software, manuales técnicos y arquitectura modular. |
+| **Entregables de Ejemplo** | 📁 **[Ver Carpeta de Ejemplos Generados](./ejemplos/)** | Archivos .cex, XML oficial v3.0 y PDF de 15 páginas generados en vivo. |
 | **Historial de Versiones** | 📜 **[Ver Changelog](./CHANGELOG.md)** | Registro detallado de versiones y mejoras implementadas. |
 | **Repositorio GitHub** | 💻 **[GitHub jmcaamanog](https://github.com/jmcaamanog/CE3X-MCP-Server)** | Código fuente, issues y lanzamientos oficiales. |
 
@@ -24,25 +25,101 @@
 
 | Perfil / Modo | Icono | Descripción del Flujo | Entrada Requerida | Entregables Generados |
 | :--- | :---: | :--- | :--- | :--- |
-| **Modo Express (Datos Mínimos)** | ⚡ | **Certificación ultrarrápida en segundos** interactuando por chat. La IA infiere automáticamente la envolvente y el clima normativo oficial. | Referencia Catastral (o municipio) + año + superficie + climatización básica. | Archivo .cex, XML oficial v3.0 homologado y **PDF oficial de 15 páginas**. |
+| **Modo Express (Datos Mínimos)** | ⚡ | **Certificación ultrarrápida en segundos** interactuando por chat. La IA infiere automáticamente la envolvente y el clima normativo oficial. | Referencia Catastral (o municipio) + año + superficie + climatización básica. | Archivo `.cex`, XML oficial v3.0 homologado y **PDF oficial de 15 páginas**. |
 | **Modo Técnico Documental** | 📐 | **Extracción multimodal asistida por IA**. Lee planos arquitectónicos en PDF y fotos de placas de características de equipos térmicos. | Plano de distribución en PDF/imagen + fotos o fichas técnicas de caldera/aerotermia. | Desglose completo de estancias, fachadas, ventanas, potencias y rendimientos estacionales (SCOP/COP). |
-| **Modo BIM & Auditoría NextGen** | 🏗️ | **Conexión directa con modelos BIM** y justificación automática de subvenciones públicas y deducciones IRPF. | Archivo BIM .ifc (Revit, Archicad, CYPE) o proyecto de rehabilitación. | Cubicación BIM con IfcOpenShell, cálculo solar satelital PVGIS, salto a letra A y **Dictamen NextGen (RD 853/2021)**. |
+| **Modo BIM & Auditoría NextGen** | 🏗️ | **Conexión directa con modelos BIM** y justificación automática de subvenciones públicas y deducciones IRPF. | Archivo BIM `.ifc` (Revit, Archicad, CYPE) o proyecto de rehabilitación. | Cubicación BIM con `IfcOpenShell`, cálculo solar satelital PVGIS, salto a letra A y **Dictamen NextGen (RD 853/2021)**. |
 
 ---
 
 > [!IMPORTANT]
-> ### 📥 Instalación Rápida para Clientes MCP (Claude Desktop, Cursor, Antigravity)
-> Para integrar este servidor en tu cliente de IA favorito:
-> ```bash
-> # Ejecución directa con uvx (sin instalación manual):
-> uvx --from git+https://github.com/jmcaamanog/CE3X-MCP-Server ce3x-mcp
-> ```
-> O mediante instalación local con pip:
-> ```bash
-> git clone https://github.com/jmcaamanog/CE3X-MCP-Server.git
-> cd CE3X-MCP-Server
-> pip install -e .
-> ```
+> **🚀 Integración Instantánea en 1 Clic:** No necesitas compilar ni clonar nada si usas `uvx`. Copia y pega el bloque JSON correspondiente en tu cliente de IA (Claude Desktop, Cursor, Antigravity IDE o VS Code) y dispondrás de 11 herramientas oficiales en tu chat al instante.
+
+---
+
+## 🔌 Configuración Inmediata en Clientes de IA
+
+### 1. Claude Desktop (`claude_desktop_config.json`)
+Abre tu configuración de Claude Desktop (%APPDATA%\Claude\claude_desktop_config.json en Windows o ~/Library/Application Support/Claude/claude_desktop_config.json en macOS) y añade:
+
+```json
+{
+  "mcpServers": {
+    "ce3x": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/jmcaamanog/CE3X-MCP-Server.git",
+        "ce3x-mcp"
+      ]
+    }
+  }
+}
+```
+
+### 2. Cursor IDE (`.cursor/mcp.json` o Settings > MCP)
+En Cursor, ve a **Features > MCP Servers** o añade en tu archivo `.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "ce3x": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/jmcaamanog/CE3X-MCP-Server.git",
+        "ce3x-mcp"
+      ]
+    }
+  }
+}
+```
+
+### 3. Antigravity IDE / Gemini (`~/.gemini/config/mcp_config.json`)
+```json
+{
+  "mcpServers": {
+    "ce3x": {
+      "command": "uvx",
+      "args": [
+        "--from",
+        "git+https://github.com/jmcaamanog/CE3X-MCP-Server.git",
+        "ce3x-mcp"
+      ]
+    }
+  }
+}
+```
+
+### 4. Instalación Local para Desarrollo (Opcional con `pip`)
+Si prefieres tener el repositorio clonado y trabajar en local:
+
+```bash
+git clone https://github.com/jmcaamanog/CE3X-MCP-Server.git
+cd CE3X-MCP-Server
+python -m venv .venv
+.venv\Scripts\activate
+pip install -e .
+```
+
+Y en tu archivo de configuración MCP indicas el intérprete local:
+
+```json
+{
+  "mcpServers": {
+    "ce3x": {
+      "command": "C:\\ruta\\al\\repositorio\\.venv\\Scripts\\python.exe",
+      "args": [
+        "-I",
+        "-m",
+        "ce3x_mcp.server"
+      ],
+      "env": {
+        "PYTHONPATH": "C:\\ruta\\al\\repositorio\\src"
+      }
+    }
+  }
+}
+```
 
 ---
 
@@ -60,22 +137,30 @@
 
 ---
 
-## 🚀 Configuración en Clientes MCP
+## 🛠️ Catálogo de Herramientas MCP Disponibles
 
-### Configuración en claude_desktop_config.json o mcp_config.json
-```json
-{
-  "mcpServers": {
-    "ce3x": {
-      "command": "python",
-      "args": [
-        "-m",
-        "ce3x_mcp.server"
-      ]
-    }
-  }
-}
-```
+Una vez conectado, cualquier usuario puede solicitar a su modelo de lenguaje acciones como:
+
+1. `consultar_catastro(referencia_catastral)`: Ingesta de datos de catastro en un solo clic.
+2. `determinar_zona_climatica(provincia, municipio, altitud)`: Clima reglamentario CTE DB-HE.
+3. `estimar_envolvente_por_defecto(ano_construccion, zona_climatica, superficie_util)`: Transmitancias térmicas oficiales según la antigüedad del inmueble.
+4. `calcular_calificacion_energetica(proyecto)`: Demandas, consumos, emisiones y letra global (A a G).
+5. `analizar_modelo_bim_ifc(ifc_path)`: Extracción geométrica de envolvente térmica desde modelos BIM.
+6. `analizar_plano_arquitectura_pdf(pdf_path)`: Reconocimiento inteligente de recintos, superficies y carpinterías.
+7. `analizar_ficha_equipo_clima(texto_o_ficha)`: Lectura de potencias y rendimientos estacionales (SCOP/COP).
+8. `calcular_produccion_fotovoltaica_pvgis(latitud, longitud, potencia_kwp)`: Simulación solar satelital real.
+9. `proponer_medidas_mejora_rd390(...)`: Generación de los 3 paquetes oficiales de rehabilitación.
+10. `emitir_dictamen_subvenciones_nextgen(...)`: Certificación de ahorros RD 853/2021 y deducción fiscal IRPF.
+11. `generar_certificado_completo(...)`: Pipeline integral que emite el archivo `.cex`, el XML oficial v3.0 y el PDF de 15 páginas.
+
+---
+
+## 📁 Entregables de Prueba Incluidos en el Repositorio
+
+En la carpeta [`ejemplos/`](./ejemplos/) encontrarás los entregables generados durante las pruebas oficiales de certificación:
+* **[`Proyecto_Vivienda_Coruna_1985.cex`](./ejemplos/Proyecto_Vivienda_Coruna_1985.cex)**: Proyecto nativo editable en CE3X v3.2.
+* **[`Certificado_Oficial_Coruna_1985.xml`](./ejemplos/Certificado_Oficial_Coruna_1985.xml)**: XML ministerial validado con `xmlcheck.exe`.
+* **[`Certificado_Oficial_Coruna_1985.pdf`](./ejemplos/Certificado_Oficial_Coruna_1985.pdf)**: Certificado de Eficiencia Energética oficial de 15 páginas.
 
 ---
 
