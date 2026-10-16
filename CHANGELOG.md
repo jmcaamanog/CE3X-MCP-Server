@@ -4,6 +4,23 @@ En este documento se detalla la evolución completa del servidor oficial MCP par
 
 ---
 
+### Versión 1.3.0 — 16/10/2026: 🚀 22 Herramientas Oficiales, Instalador 1-Clic e Integración PyPI
+
+* **🖱️ Instalador Automático de 1 Clic para Windows (`instalar_en_claude_desktop.bat`):**
+  - Script autoejecutable sin consola ni necesidad de conocimientos técnicos.
+  - Localiza e inyecta de forma no destructiva la configuración de `ce3x` en Claude Desktop (`claude_desktop_config.json`) y Cursor IDE (`.cursor/mcp.json`).
+* **📦 Preparación y Soporte Universal PyPI (`uvx ce3x-mcp`):**
+  - Configuración dual de ejecutables de entrada en `pyproject.toml` (`ce3x-mcp` y `ce3x-mcp-server`).
+* **🏢 Soporte Integral de Pequeño Terciario y Locales Comerciales (`calcular_parametros_terciario_local_comercial`):**
+  - Cálculo de potencia de iluminación instalada ($W/m^2$), VEEI objetivo conforme a CTE DB-HE 3 y tasas de renovación de aire exterior según RITE (IDA 2 / IDA 3).
+* **🏙️ Cálculo de Sombras por Obstáculo Remoto / Edificio Enfrente (`calcular_sombras_obstaculo_edificio_enfrente`):**
+  - Cálculo angular de elevación $\alpha = \arctan(H/D)$ y factor reductor estacional $F_{sh}$ conforme a las tablas oficiales de obstáculos de CE3X y CTE DB-HE.
+* **✍️ Perfil Técnico Colegial Persistente (`configurar_perfil_tecnico_colegiado`):**
+  - Almacenamiento seguro en `~/.ce3x_mcp_perfil_tecnico.json` para autorrellenado automático de credenciales profesionales en `.cex`, XML y PDFs oficiales.
+* **🧪 Batería de Pruebas Unitarias al 100%:** 22 herramientas FastMCP verificadas con 8 suites de tests pasando satisfactoriamente.
+
+---
+
 ### Versión 1.2.0 — 16/10/2026: 🚀 Arquitectura de 5 Carpetas, Auto-Organizador y Ecosistema de Visita
 
 * **📁 Arquitectura Estándar de 5 Subcarpetas para Cada Inmueble:**

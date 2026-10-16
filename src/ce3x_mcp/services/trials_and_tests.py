@@ -187,3 +187,123 @@ def calcular_sombras_estacionales_hueco(
         "reduccion_radiacion_verano_pct": round((1.0 - f_sombra_verano) * 100.0, 1),
         "diagnostico_sombras": diagnostico
     }
+
+import math
+
+def calcular_patron_sombras_edificio_colindante(
+    distancia_edificio_m: float,
+    altura_edificio_m: float,
+    orientacion_fachada: str = "Sur",
+    descripcion_obstaculo: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Calcula el angulo de elevacion de obstaculo remoto (edificio enfrente o colindante)
+    y el factor reductor de radiacion solar F_sh segun la tabla oficial de obstaculos de CE3X y CTE DB-HE.
+    """
+    if distancia_edificio_m <= 0:
+        raise ValueError("La distancia al edificio obstaculo debe ser mayor que cero.")
+    
+    rad = math.atan(altura_edificio_m / distancia_edificio_m)
+    alfa_grados = round(math.degrees(rad), 1)
+    
+    if alfa_grados < 10.0:
+        f_verano, f_invierno = 1.0, 1.0
+        nivel = "Obstaculo despreciable (cielo despejado)"
+    elif alfa_grados < 25.0:
+        f_verano, f_invierno = 0.90, 0.80
+        nivel = "Obstaculo bajo (sombras ligeras en invierno)"
+    elif alfa_grados < 45.0:
+        f_verano, f_invierno = 0.75, 0.55
+        nivel = "Obstaculo medio (calle estandar urbana)"
+    elif alfa_grados < 60.0:
+        f_verano, f_invierno = 0.60, 0.35
+        nivel = "Obstaculo alto (calle estrecha o patio denso)"
+    else:
+        f_verano, f_invierno = 0.40, 0.15
+        nivel = "Obstaculo severo (patio de luces angosto o canon urbano)"
+        
+    return {
+        "valido": True,
+        "distancia_edificio_m": distancia_edificio_m,
+        "altura_edificio_m": altura_edificio_m,
+        "angulo_elevacion_alfa_grados": alfa_grados,
+        "orientacion_fachada": orientacion_fachada.upper(),
+        "factor_sombra_verano_fsh": f_verano,
+        "factor_sombra_invierno_fsh": f_invierno,
+        "bloqueo_radiacion_invierno_pct": round((1.0 - f_invierno) * 100.0, 1),
+        "clasificacion_entorno": nivel,
+        "descripcion": descripcion_obstaculo or f"Edificio enfrente a {distancia_edificio_m}m con {altura_edificio_m}m de altura"
+    }
+
+def estimar_parametros_terciario_comercial(
+    tipo_actividad: str = "Comercio",
+    superficie_util_m2: float = 100.0,
+    tipo_luminaria: str = "LED",
+    nivel_iluminacion_lux: Optional[float] = None
+) -> Dict[str, Any]:
+    """
+    Calcula los parametros obligatorios de CE3X para uso Pequeno Terciario / Locales Comerciales:
+    potencia de iluminacion instalada (W/m2), VEEI objetivo segun CTE DB-HE 3 y tasa de ventilacion segun RITE.
+    """
+    actividad = tipo_actividad.strip().lower()
+    
+    if "oficina" in actividad or "despacho" in actividad:
+        lux_ref = 500.0
+        horas_anuales = 2500
+        ida = "IDA 2 (Aire de buena calidad - 12.5 l/s por persona)"
+        caudal_pers = 12.5
+        ocupacion_m2_pers = 10.0
+    elif "comercio" in actividad or "tienda" in actividad or "local" in actividad:
+        lux_ref = 500.0
+        horas_anuales = 3000
+        ida = "IDA 2 (Aire de buena calidad - 10 l/s por persona)"
+        caudal_pers = 10.0
+        ocupacion_m2_pers = 5.0
+    elif "restaurante" in actividad or "bar" in actividad:
+        lux_ref = 300.0
+        horas_anuales = 4000
+        ida = "IDA 3 (Aire de calidad media - 8 l/s por persona)"
+        caudal_pers = 8.0
+        ocupacion_m2_pers = 3.0
+    else:
+        lux_ref = 300.0
+        horas_anuales = 2000
+        ida = "IDA 2 (Calidad estandar)"
+        caudal_pers = 10.0
+        ocupacion_m2_pers = 10.0
+        
+    lux = nivel_iluminacion_lux or lux_ref
+    
+    lum = tipo_luminaria.strip().upper()
+    if "LED" in lum:
+        veei_estimado = 1.8
+        potencia_w_m2 = round((veei_estimado * lux) / 100.0, 1)
+    elif "FLUOR" in lum:
+        veei_estimado = 3.5
+        potencia_w_m2 = round((veei_estimado * lux) / 100.0, 1)
+    else:
+        veei_estimado = 6.0
+        potencia_w_m2 = round((veei_estimado * lux) / 100.0, 1)
+        
+    potencia_total_kw = round((potencia_w_m2 * superficie_util_m2) / 1000.0, 2)
+    consumo_anual_kwh_m2 = round((potencia_w_m2 * horas_anuales) / 1000.0, 1)
+    
+    personas_estimadas = max(1, round(superficie_util_m2 / ocupacion_m2_pers))
+    caudal_total_m3h = round(personas_estimadas * caudal_pers * 3.6, 1)
+    
+    return {
+        "valido": True,
+        "tipo_actividad": tipo_actividad,
+        "superficie_util_m2": superficie_util_m2,
+        "tipo_luminaria": lum,
+        "nivel_iluminacion_lux": lux,
+        "potencia_iluminacion_w_m2": potencia_w_m2,
+        "potencia_total_instalada_kw": potencia_total_kw,
+        "veei_estimado_w_m2_100lux": veei_estimado,
+        "cumple_cte_db_he3": veei_estimado <= 3.5,
+        "consumo_anual_iluminacion_kwh_m2": consumo_anual_kwh_m2,
+        "horas_anuales_actividad": horas_anuales,
+        "categoria_calidad_aire_rite": ida,
+        "ocupantes_estimados": personas_estimadas,
+        "caudal_ventilacion_exterior_m3h": caudal_total_m3h
+    }

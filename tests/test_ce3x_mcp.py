@@ -16,7 +16,9 @@ from ce3x_mcp.services.trials_and_tests import (
     registrar_ensayo_blower_door,
     calcular_puentes_termicos_cte,
     contrastar_facturas_reales,
-    calcular_sombras_estacionales_hueco
+    calcular_sombras_estacionales_hueco,
+    calcular_patron_sombras_edificio_colindante,
+    estimar_parametros_terciario_comercial
 )
 from ce3x_mcp.services.technician_profile import guardar_perfil_tecnico, obtener_perfil_tecnico
 from ce3x_mcp.services.libraries import inferir_solucion_envolvente_por_ano, CATALOGO_VIDRIOS
@@ -195,7 +197,19 @@ def test_trials_and_tests():
     assert p["valido"] is True
     assert p["perfil"]["titulacion"] == "Arquitecto Técnico"
 
-    print("[PASS] test_trials_and_tests (visita oficial, blower door, puentes termicos, facturas, sombras y perfil tecnico)")
+    # 7. Sombra de edificio enfrente (obstaculo remoto)
+    obs = calcular_patron_sombras_edificio_colindante(distancia_edificio_m=12.0, altura_edificio_m=15.0)
+    assert obs["valido"] is True
+    assert obs["angulo_elevacion_alfa_grados"] > 45.0
+    assert obs["factor_sombra_invierno_fsh"] <= 0.50
+
+    # 8. Estimacion de parametros terciario / local comercial
+    terc = estimar_parametros_terciario_comercial(tipo_actividad="Comercio", superficie_util_m2=120.0, tipo_luminaria="LED")
+    assert terc["valido"] is True
+    assert terc["cumple_cte_db_he3"] is True
+    assert terc["potencia_iluminacion_w_m2"] == 9.0
+
+    print("[PASS] test_trials_and_tests (visita oficial, blower door, puentes termicos, facturas, sombras, obstaculo remoto, terciario y perfil tecnico)")
 
 
 if __name__ == "__main__":

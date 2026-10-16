@@ -56,7 +56,9 @@ from ce3x_mcp.services.trials_and_tests import (
     registrar_ensayo_blower_door,
     calcular_puentes_termicos_cte,
     contrastar_facturas_reales,
-    calcular_sombras_estacionales_hueco
+    calcular_sombras_estacionales_hueco,
+    calcular_patron_sombras_edificio_colindante,
+    estimar_parametros_terciario_comercial
 )
 from ce3x_mcp.services.technician_profile import guardar_perfil_tecnico, obtener_perfil_tecnico
 from ce3x_mcp.services.smart_folder_auditor import auditar_carpeta_inmueble, certificar_inmueble_desde_carpeta, organizar_carpeta_visita as organizar_carpeta_visita_impl
@@ -631,6 +633,46 @@ def asistente_auditoria_carpeta_visita(ruta_carpeta: str = "ruta/a/carpeta_inmue
         "y datos catastrales o de planos están presentes. Presenta un resumen conciso "
         "y hazme únicamente las preguntas sobre los datos críticos que falten (sombras, color de marcos, instalaciones) "
         "antes de generar el certificado completo."
+    )
+
+
+
+@mcp.tool()
+def calcular_sombras_obstaculo_edificio_enfrente(
+    distancia_edificio_m: float,
+    altura_edificio_m: float,
+    orientacion_fachada: str = "Sur",
+    descripcion_obstaculo: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    Calcula el angulo de elevacion alfa del patron de sombra producido por un obstaculo remoto
+    (edificio de enfrente, colindante o accidente geografico) y su factor reductor de radiacion
+    solar estacional F_sh conforme al CTE DB-HE y el motor de calculo oficial de CE3X v3.2.
+    """
+    return calcular_patron_sombras_edificio_colindante(
+        distancia_edificio_m=distancia_edificio_m,
+        altura_edificio_m=altura_edificio_m,
+        orientacion_fachada=orientacion_fachada,
+        descripcion_obstaculo=descripcion_obstaculo
+    )
+
+@mcp.tool()
+def calcular_parametros_terciario_local_comercial(
+    tipo_actividad: str = "Comercio",
+    superficie_util_m2: float = 100.0,
+    tipo_luminaria: str = "LED",
+    nivel_iluminacion_lux: Optional[float] = None
+) -> Dict[str, Any]:
+    """
+    Estima los parametros normativos obligatorios de CE3X para edificios de uso Terciario y Locales
+    Comerciales: potencia de iluminacion instalada (W/m2), VEEI segun CTE DB-HE 3, consumo anual estimado
+    y tasa de renovacion de aire exterior / calidad del aire segun RITE (IDA 2 / IDA 3).
+    """
+    return estimar_parametros_terciario_comercial(
+        tipo_actividad=tipo_actividad,
+        superficie_util_m2=superficie_util_m2,
+        tipo_luminaria=tipo_luminaria,
+        nivel_iluminacion_lux=nivel_iluminacion_lux
     )
 
 @mcp.resource("ce3x://normativa/factores_paso")
