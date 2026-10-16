@@ -2,7 +2,7 @@
 
 | 🏗️ Perfil & ConTech | 📈 Repositorio & Enlaces |
 | :--- | :--- |
-| ![Profesión](https://img.shields.io/badge/Profesi%C3%B3n-Arquitectos%20T%C3%A9cnicos-2e7d32?logo=micro%3Abit&logoColor=white&style=plastic) <br> ![Role](https://img.shields.io/badge/Role-BIM%20%26%20ConTech-007ACC?logo=bim360&style=plastic) <br> ![Location](https://img.shields.io/badge/Location-A%20Coru%C3%B1a%20%F0%9F%8C%8A-005B94?logo=lighthouse&logoColor=white&style=plastic) <br> ![Sector](https://img.shields.io/badge/Sector-ConTech%20%7C%20AECO-E65100?logo=construct3&style=plastic) <br> ![Protocol](https://img.shields.io/badge/Protocol-Model%20Context%20Protocol-8A2BE2?logo=anthropic&style=plastic) <br> ![Engine](https://img.shields.io/badge/Engine-FastMCP%20%26%20Typst-10b981?logo=python&style=plastic) <br> ![Normativa](https://img.shields.io/badge/Normativa-CTE%20DB--HE%20%7C%20RD%20390%2F2021-d97706?style=plastic) <br> ![Language](https://img.shields.io/badge/Language-Python%203.11-3776AB?logo=python&logoColor=white&style=plastic) | [![PyPI Version](https://img.shields.io/pypi/v/ce3x-mcp-server?color=blue&logo=pypi&logoColor=white&style=plastic)](https://pypi.org/project/ce3x-mcp-server/) <br> [![Versión](https://img.shields.io/github/v/release/jmcaamanog/CE3X-MCP-Server?label=Version&color=3b82f6&logo=github&style=plastic)](https://github.com/jmcaamanog/CE3X-MCP-Server/releases/latest) <br> [![Stars](https://img.shields.io/github/stars/jmcaamanog/CE3X-MCP-Server?style=plastic&label=Stars&color=f59e0b&logo=github)](https://github.com/jmcaamanog/CE3X-MCP-Server/stargazers) <br> [![Licencia](https://img.shields.io/badge/Licencia-MIT-8b5cf6.svg?style=plastic)](./LICENSE) <br> [![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=plastic&logo=linkedin)](https://www.linkedin.com/in/jmcaamanog/) <br> [![Web](https://img.shields.io/badge/Web-jmcaamanog.pages.dev-005B94?style=plastic)](https://jmcaamanog.pages.dev) |
+| ![Profesión](https://img.shields.io/badge/Profesi%C3%B3n-Arquitectos%20T%C3%A9cnicos-2e7d32?logo=micro%3Abit&logoColor=white&style=plastic) <br> ![Role](https://img.shields.io/badge/Role-BIM%20%26%20ConTech-007ACC?logo=bim360&style=plastic) <br> ![Location](https://img.shields.io/badge/Location-A%20Coru%C3%B1a%20%F0%9F%8C%8A-005B94?logo=lighthouse&logoColor=white&style=plastic) <br> ![Sector](https://img.shields.io/badge/Sector-ConTech%20%7C%20AECO-E65100?logo=construct3&style=plastic) <br> ![Protocol](https://img.shields.io/badge/Protocol-Model%20Context%20Protocol-8A2BE2?logo=anthropic&style=plastic) <br> ![Engine](https://img.shields.io/badge/Engine-FastMCP%20%26%20Typst-10b981?logo=python&style=plastic) <br> ![Normativa](https://img.shields.io/badge/Normativa-CTE%20DB--HE%20%7C%20RD%20390%2F2021-d97706?style=plastic) <br> ![Language](https://img.shields.io/badge/Language-Python%203.11-3776AB?logo=python&logoColor=white&style=plastic) | [![PyPI Version](https://img.shields.io/pypi/v/ce3x-mcp-server?color=blue&logo=pypi&logoColor=white&style=plastic)](https://pypi.org/project/ce3x-mcp-server/) <br> [![PyPI Descargas](https://img.shields.io/pypi/dm/ce3x-mcp-server?color=10b981&label=Descargas%2Fmes&logo=pypi&logoColor=white&style=plastic)](https://pypi.org/project/ce3x-mcp-server/) <br> [![Versión](https://img.shields.io/github/v/release/jmcaamanog/CE3X-MCP-Server?label=Version&color=3b82f6&logo=github&style=plastic)](https://github.com/jmcaamanog/CE3X-MCP-Server/releases/latest) <br> [![Stars](https://img.shields.io/github/stars/jmcaamanog/CE3X-MCP-Server?style=plastic&label=Stars&color=f59e0b&logo=github)](https://github.com/jmcaamanog/CE3X-MCP-Server/stargazers) <br> [![Licencia](https://img.shields.io/badge/Licencia-MIT-8b5cf6.svg?style=plastic)](./LICENSE) <br> [![LinkedIn](https://img.shields.io/badge/LinkedIn-0077B5?style=plastic&logo=linkedin)](https://www.linkedin.com/in/jmcaamanog/) <br> [![Web](https://img.shields.io/badge/Web-jmcaamanog.pages.dev-005B94?style=plastic)](https://jmcaamanog.pages.dev) |
 
 ### Servidor MCP Oficial para Automatizar Certificados de Eficiencia Energética con IA (Claude, Gemini, Cursor)
 *Diseñado bajo la perspectiva técnica de un Arquitecto Técnico & BIM Manager para dotar al sector AECO de una herramienta libre, rigurosa y ultrarrápida.*
@@ -68,7 +68,7 @@
 ## 🔌 Configuración Inmediata en Clientes de IA
 
 ### 1. Claude Desktop (`claude_desktop_config.json`)
-Abre tu configuración de Claude Desktop (%APPDATA%\Claude\claude_desktop_config.json en Windows o ~/Library/Application Support/Claude/claude_desktop_config.json en macOS) y añade:
+Abre tu configuración de Claude Desktop (`%APPDATA%\Claude\claude_desktop_config.json` en Windows o `~/Library/Application Support/Claude/claude_desktop_config.json` en macOS) y añade el paquete oficial de PyPI:
 
 ```json
 {
@@ -77,7 +77,7 @@ Abre tu configuración de Claude Desktop (%APPDATA%\Claude\claude_desktop_config
       "command": "uvx",
       "args": [
         "--from",
-        "git+https://github.com/jmcaamanog/CE3X-MCP-Server.git",
+        "ce3x-mcp-server",
         "ce3x-mcp"
       ]
     }
@@ -86,7 +86,7 @@ Abre tu configuración de Claude Desktop (%APPDATA%\Claude\claude_desktop_config
 ```
 
 ### 2. Cursor IDE (`.cursor/mcp.json` o Settings > MCP)
-En Cursor, ve a **Features > MCP Servers** o añade en tu archivo `.cursor/mcp.json`:
+En Cursor, ve a **Settings > MCP Servers** (o añade en tu archivo `.cursor/mcp.json`):
 
 ```json
 {
@@ -95,7 +95,7 @@ En Cursor, ve a **Features > MCP Servers** o añade en tu archivo `.cursor/mcp.j
       "command": "uvx",
       "args": [
         "--from",
-        "git+https://github.com/jmcaamanog/CE3X-MCP-Server.git",
+        "ce3x-mcp-server",
         "ce3x-mcp"
       ]
     }
@@ -111,7 +111,7 @@ En Cursor, ve a **Features > MCP Servers** o añade en tu archivo `.cursor/mcp.j
       "command": "uvx",
       "args": [
         "--from",
-        "git+https://github.com/jmcaamanog/CE3X-MCP-Server.git",
+        "ce3x-mcp-server",
         "ce3x-mcp"
       ]
     }

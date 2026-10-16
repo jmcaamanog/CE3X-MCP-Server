@@ -64,12 +64,12 @@ def configurar_claude_desktop():
             "cwd": repo_root
         }
     else:
-        print("[INFO] Configurando modo universal uvx (nube/git)...")
+        print("[INFO] Configurando modo universal PyPI (uvx)...")
         config_data["mcpServers"]["ce3x"] = {
             "command": "uvx",
             "args": [
                 "--from",
-                "git+https://github.com/jmcaamanog/CE3X-MCP-Server.git",
+                "ce3x-mcp-server",
                 "ce3x-mcp"
             ]
         }
