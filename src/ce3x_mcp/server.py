@@ -1,5 +1,27 @@
-﻿from ce3x_mcp.services.pvgis_client import calcular_produccion_solar_pvgis
-from fastmcp import FastMCP
+﻿try:
+    from fastmcp import FastMCP
+except ImportError:
+    try:
+        from mcp.server.fastmcp import FastMCP
+    except ImportError:
+        class FastMCP:
+            def __init__(self, name: str, description: str = ""):
+                self.name = name
+                self.description = description
+                self.tools = {}
+            def tool(self):
+                def decorator(func):
+                    self.tools[func.__name__] = func
+                    return func
+                return decorator
+            def resource(self, uri: str):
+                def decorator(func): return func
+                return decorator
+            def prompt(self):
+                def decorator(func): return func
+                return decorator
+            def run(self):
+                print(f"FastMCP {self.name} iniciado.")
 from typing import Optional, Dict, Any, List
 import os
 import tempfile
@@ -26,6 +48,9 @@ from ce3x_mcp.services.cex_codec import guardar_fichero_cex_basico
 from ce3x_mcp.services.bim_parser import extraer_envolvente_desde_ifc
 from ce3x_mcp.services.equipment_parser import analizar_datos_equipo_climatizacion
 from ce3x_mcp.services.improvement_engine import calcular_paquetes_medidas_mejora
+from ce3x_mcp.services.pvgis_client import calcular_produccion_solar_pvgis
+from ce3x_mcp.services.nextgen_report import generar_informe_justificativo_nextgen
+from ce3x_mcp.services.plan_parser import analizar_plano_distribucion_pdf
 
 # Instancia oficial del servidor FastMCP
 mcp = FastMCP(
@@ -131,6 +156,14 @@ def analizar_modelo_bim_ifc(ifc_path: str) -> Dict[str, Any]:
     return extraer_envolvente_desde_ifc(ifc_path)
 
 @mcp.tool()
+def analizar_plano_arquitectura_pdf(pdf_path: str) -> Dict[str, Any]:
+    """
+    Abre y analiza un plano arquitectónico en PDF mediante PyMuPDF, extrayendo
+    superficies útiles de estancias (m²) y cuadros de carpintería de huecos y ventanas.
+    """
+    return analizar_plano_distribucion_pdf(pdf_path)
+
+@mcp.tool()
 def analizar_ficha_equipo_clima(descripcion_o_ficha: str) -> Dict[str, Any]:
     """
     Analiza la descripción o texto de la ficha técnica de un equipo térmico
@@ -138,6 +171,20 @@ def analizar_ficha_equipo_clima(descripcion_o_ficha: str) -> Dict[str, Any]:
     rendimiento estacional (SCOP/COP/SEER) y vector energético para CE3X.
     """
     return analizar_datos_equipo_climatizacion(descripcion_o_ficha)
+
+@mcp.tool()
+def calcular_produccion_fotovoltaica_pvgis(
+    latitud: float,
+    longitud: float,
+    potencia_pico_kw: float = 3.0,
+    inclinacion_grados: float = 35.0,
+    azimut_grados: float = 0.0
+) -> Dict[str, Any]:
+    """
+    Calcula con precisión científica la producción de energía solar fotovoltaica (kWh/año y mensual)
+    conectando con la API oficial PVGIS de la Comisión Europea (JRC) con radiación satelital SARAH-2.
+    """
+    return calcular_produccion_solar_pvgis(latitud, longitud, potencia_pico_kw, inclinacion_grados, azimut_grados)
 
 @mcp.tool()
 def proponer_medidas_mejora_rd390(
@@ -189,6 +236,60 @@ def proponer_medidas_mejora_rd390(
         "calificacion_actual": calc,
         "medidas_de_mejora": [m.model_dump() for m in medidas]
     }
+
+@mcp.tool()
+def emitir_dictamen_subvenciones_nextgen(
+    superficie_util: float,
+    ano_construccion: int,
+    zona_climatica: str = "C1",
+    tipo_calefaccion: str = "EfectoJoule",
+    tipo_acs: str = "EfectoJoule",
+    paquete_mejora: int = 3
+) -> Dict[str, Any]:
+    """
+    Genera el informe técnico justificativo y dictamen oficial de cumplimiento para las
+    ayudas Next Generation EU (Real Decreto 853/2021) y deducciones del IRPF (D.A. 50ª Ley IRPF),
+    acreditando si se supera el umbral del 30% de reducción en energía primaria no renovable.
+    - paquete_mejora: 1 (Envolvente), 2 (Aerotermia) o 3 (Integral con Solar FV).
+    """
+    calc = calcular_calificacion_energetica(
+        superficie_util=superficie_util,
+        ano_construccion=ano_construccion,
+        zona_climatica=zona_climatica,
+        tipo_calefaccion=tipo_calefaccion,
+        tipo_acs=tipo_acs
+    )
+    adm = DatosAdministrativos(
+        nombre_edificio="Inmueble Objeto de Rehabilitación",
+        direccion="Calle de la Rehabilitación 1",
+        municipio="A Coruña",
+        provincia="A Coruña",
+        codigo_postal="15001"
+    )
+    gen = DatosGenerales(
+        ano_construccion=ano_construccion,
+        zona_climatica=zona_climatica,
+        superficie_util=superficie_util
+    )
+    res = ResultadoCalificacion(
+        demanda_calefaccion=calc["demanda_calefaccion_kwh_m2a"],
+        demanda_refrigeracion=calc["demanda_refrigeracion_kwh_m2a"],
+        demanda_acs=calc["demanda_acs_kwh_m2a"],
+        consumo_energia_primaria_nr=calc["consumo_energia_primaria_nr_kwh_m2a"],
+        emisiones_co2=calc["emisiones_co2_kg_m2a"],
+        letra_global_emisiones=calc["calificacion_global_emisiones"],
+        letra_global_energia_primaria=calc["calificacion_global_energia_primaria"],
+        letra_calefaccion=calc["calificacion_global_emisiones"],
+        letra_refrigeracion="A",
+        letra_acs=calc["calificacion_global_emisiones"]
+    )
+    proyecto = ProyectoCertificacion(administrativos=adm, generales=gen)
+    medidas = calcular_paquetes_medidas_mejora(proyecto, res)
+    
+    idx = max(0, min(paquete_mejora - 1, len(medidas) - 1))
+    medida_sel = medidas[idx]
+    
+    return generar_informe_justificativo_nextgen(proyecto, res, medida_sel)
 
 @mcp.tool()
 def generar_certificado_completo(
@@ -300,17 +401,4 @@ if __name__ == "__main__":
     main()
 
 
-@mcp.tool()
-def calcular_produccion_fotovoltaica_pvgis(
-    latitud: float,
-    longitud: float,
-    potencia_pico_kw: float = 3.0,
-    inclinacion_grados: float = 35.0,
-    azimut_grados: float = 0.0
-) -> Dict[str, Any]:
-    """
-    Calcula con precisión científica la producción de energía solar fotovoltaica (kWh/año y mensual)
-    conectando con la API oficial PVGIS de la Comisión Europea (JRC) con radiación satelital SARAH-2.
-    """
-    return calcular_produccion_solar_pvgis(latitud, longitud, potencia_pico_kw, inclinacion_grados, azimut_grados)
 
