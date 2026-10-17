@@ -737,7 +737,7 @@ def obtener_catalogo_soluciones_constructivas() -> str:
 @mcp.prompt()
 def iniciar_asistente_visita() -> str:
     """Prompt inicial de bienvenida para solicitar la carpeta de visita y organizar los archivos."""
-    return """Actúa como un Arquitecto Técnico experto en certificación energética con CE3X.
+    return r"""Actúa como un Arquitecto Técnico experto en certificación energética con CE3X.
 Al iniciar la interacción con el usuario:
 1. Pregúntale amablemente: '¿En qué carpeta de tu ordenador tienes los archivos o toma de datos de la visita del inmueble? (Por favor, facilítame la ruta completa, por ejemplo: C:\MisVisitas\Piso_RuaReal)'.
 2. Indícale que si tiene los archivos sueltos (fotos, planos, notas), los organizarás automáticamente en las 5 carpetas estándar:
@@ -909,7 +909,7 @@ def obtener_plantilla_toma_datos() -> str:
 @mcp.prompt()
 def asistente_toma_datos_inmueble() -> str:
     """Asistente conversacional interactivo para guiar la toma de datos del certificado energético paso a paso."""
-    return """Actúa como un Arquitecto Técnico especialista en eficiencia energética.
+    return r"""Actúa como un Arquitecto Técnico especialista en eficiencia energética.
 Guíame paso a paso en la toma de datos de un inmueble:
 1. Solicita primero la Referencia Catastral (20 dígitos) o dirección para consultar Catastro automáticamente.
 2. Pregunta si se dispone de plano (PDF/imagen) o croquis para extraer las superficies y huecos.
@@ -966,7 +966,26 @@ def gestionar_cache_ce3x(accion: str = "estadisticas", categoria: Optional[str] 
         }
 
 def main():
-    mcp.run()
+    import sys
+    transport = os.environ.get("MCP_TRANSPORT", "stdio").lower()
+    port = int(os.environ.get("MCP_PORT", "8000"))
+    
+    for arg in sys.argv[1:]:
+        if arg in ("--sse", "-sse"):
+            transport = "sse"
+        elif arg.startswith("--port="):
+            try:
+                port = int(arg.split("=")[1])
+            except ValueError:
+                pass
+        elif arg.startswith("--transport="):
+            transport = arg.split("=")[1].lower()
+            
+    if transport in ("sse", "http", "streamable-http"):
+        print(f"Iniciando CE3X-MCP-Server en modo {transport.upper()} sobre el puerto {port}...")
+        mcp.run(transport=transport, port=port)
+    else:
+        mcp.run()
 
 if __name__ == "__main__":
     main()
