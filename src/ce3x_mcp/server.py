@@ -438,18 +438,33 @@ def generar_certificado_completo(
         instalaciones=instalaciones
     )
     
+    # Determinar si la salida es la subcarpeta estándar CERTIFICADO/ para aplicar nombres canónicos
+    es_carpeta_cert = os.path.basename(os.path.normpath(out_dir)).upper() == "CERTIFICADO"
+
     # 1. Generar XML Oficial Limpio (validado RelaxNG, sin Centro Juvenil ni 1006 kW)
     xml_content = generar_xml_oficial_30(proyecto, res)
-    safe_mun = municipio.replace(" ", "_").replace(",", "")
-    xml_path = os.path.join(out_dir, f"Certificado_{safe_mun}_{ano_construccion}.xml")
+    if es_carpeta_cert:
+        xml_path = os.path.join(out_dir, "Certificado_Oficial_Registro.xml")
+        cex_path = os.path.join(out_dir, "Proyecto_CE3X.cex")
+    else:
+        safe_mun = municipio.replace(" ", "_").replace(",", "")
+        xml_path = os.path.join(out_dir, f"Certificado_{safe_mun}_{ano_construccion}.xml")
+        cex_path = os.path.join(out_dir, f"Proyecto_{safe_mun}_{ano_construccion}.cex")
+        
     with open(xml_path, "w", encoding="utf-8") as f:
         f.write(xml_content)
         
     # 2. Compilar PDF Oficial
     pdf_ok, pdf_res = compilar_pdf_desde_xml(xml_path, out_dir)
+    if es_carpeta_cert:
+        pdf_temp = os.path.join(out_dir, "Certificado_Oficial_Registro.pdf")
+        pdf_canonico = os.path.join(out_dir, "Informe_Certificacion_Energetica.pdf")
+        if os.path.exists(pdf_temp) and os.path.abspath(pdf_temp) != os.path.abspath(pdf_canonico):
+            if os.path.exists(pdf_canonico):
+                os.remove(pdf_canonico)
+            shutil.move(pdf_temp, pdf_canonico)
     
     # 3. Exportar .CEX nativo completo y compatible con la interfaz CE3X (sin CENER ni Pamplona)
-    cex_path = os.path.join(out_dir, f"Proyecto_{safe_mun}_{ano_construccion}.cex")
     guardar_fichero_cex_completo(
         ruta_salida=cex_path,
         nombre_edificio=nombre_edificio,

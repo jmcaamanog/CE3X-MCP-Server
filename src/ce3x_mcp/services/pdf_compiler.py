@@ -49,6 +49,13 @@ def compilar_pdf_desde_xml(xml_path: str, output_dir: str, xml2cert_bin: Optiona
             # El PDF generado tiene el mismo nombre base que el XML
             base_name = os.path.splitext(os.path.basename(xml_path))[0]
             pdf_path = os.path.join(output_dir, f"{base_name}.pdf")
+            log_path = os.path.join(output_dir, f"{base_name}.log")
+            if os.path.exists(log_path):
+                try:
+                    if os.path.getsize(log_path) == 0:
+                        os.remove(log_path)
+                except Exception:
+                    pass
             if os.path.exists(pdf_path):
                 return True, pdf_path
             return True, f"PDF generado exitosamente en directorio: {output_dir}"

@@ -52,6 +52,22 @@ PALABRAS_CLAVE_INFORMACION = [
     "cliente", "apuntes"
 ]
 
+ARCHIVOS_EXCLUIDOS_ORGANIZACION = [
+    "LEEME_ESTRUCTURA_VISITA.txt",
+    "RESUMEN_ENTREGA.txt",
+    ".gitignore",
+    ".gitattributes",
+]
+
+CARPETAS_EXCLUIDAS_ORGANIZACION = [
+    "NOTAS",
+    ".GIT",
+    ".SYSTEM_GENERATED",
+    ".AGENTS",
+    ".GEMINI",
+    ".VSCODE"
+]
+
 CANONICAL_SUBFOLDERS = ["INFORMACION", "PLANOS", "FOTOS", "INSTALACIONES", "CERTIFICADO"]
 
 def clasificar_archivo_visita(nombre_archivo: str) -> str:
@@ -104,6 +120,40 @@ def mover_archivo_seguro(src: str, dst_dir: str) -> str:
         shutil.move(src, dest)
     return dest
 
+def extraer_huecos_de_texto(texto: str) -> List[Dict[str, Any]]:
+    """Extrae las dimensiones de ventanas y balconeras acotadas en notas técnicas."""
+    huecos = []
+    if not texto:
+        return huecos
+    pat = re.compile(
+        r'(\d+)\s*(?:ventanas?|balconeras?|puertas?|huecos?|\s+)+(?:de)?\s*(\d+[.,]\d+)\s*[xX*]\s*(\d+[.,]\d+)',
+        re.IGNORECASE
+    )
+    for line in texto.splitlines():
+        m = pat.search(line)
+        if m:
+            cant = int(m.group(1))
+            w = float(m.group(2).replace(',', '.'))
+            h = float(m.group(3).replace(',', '.'))
+            line_low = line.lower()
+            orien = "Sureste" if "sureste" in line_low or "(se)" in line_low else (
+                "Noroeste" if "noroeste" in line_low or "(no)" in line_low else (
+                    "Sur" if "sur" in line_low else (
+                        "Norte" if "norte" in line_low else "Fachada"
+                    )
+                )
+            )
+            area_tot = round(cant * w * h, 2)
+            huecos.append({
+                "cantidad": cant,
+                "ancho_m": w,
+                "alto_m": h,
+                "area_total_m2": area_tot,
+                "orientacion": orien,
+                "descripcion": line.strip("- *")
+            })
+    return huecos
+
 def organizar_carpeta_visita(ruta_carpeta: str) -> Dict[str, Any]:
     """
     Crea la estructura estándar de 5 carpetas y clasifica automáticamente los archivos:
@@ -134,8 +184,13 @@ def organizar_carpeta_visita(ruta_carpeta: str) -> Dict[str, Any]:
         if partes and partes[0].upper() in CANONICAL_SUBFOLDERS:
             continue
 
+        # Proteger estrictamente carpetas de notas o configuración (ej. NOTAS/, .git/)
+        if any(p.upper() in CARPETAS_EXCLUIDAS_ORGANIZACION for p in partes):
+            continue
+
         for f in files:
-            if f in ["LEEME_ESTRUCTURA_VISITA.txt", "RESUMEN_ENTREGA.txt"]:
+            # Proteger archivos de configuración, notas e informes de sistema
+            if f.startswith(".") or f in ARCHIVOS_EXCLUIDOS_ORGANIZACION or f in ["NOTAS_1_JMCG.md", "NOTAS_2_GEMINI.md"] or "INFORME_TECNICO" in f:
                 continue
             src_file = os.path.join(root, f)
             sub_destino = clasificar_archivo_visita(f)
@@ -289,8 +344,13 @@ def auditar_carpeta_inmueble(ruta_carpeta: str) -> Dict[str, Any]:
                 archivos_por_categoria["certificado"].append(os.path.join(rel_root, f))
             continue
 
+        # Proteger estrictamente carpetas de notas o configuración del sistema (ej. NOTAS/, .git/)
+        if any(p.upper() in CARPETAS_EXCLUIDAS_ORGANIZACION for p in partes):
+            continue
+
         for f in files:
-            if f in ["LEEME_ESTRUCTURA_VISITA.txt", "RESUMEN_ENTREGA.txt"]:
+            # No considerar como 'archivos sueltos' ficheros de sistema, configuración, notas o resúmenes
+            if f.startswith(".") or f in ARCHIVOS_EXCLUIDOS_ORGANIZACION or f in ["NOTAS_1_JMCG.md", "NOTAS_2_GEMINI.md"] or "INFORME_TECNICO" in f:
                 continue
             ruta_f = os.path.join(root, f)
             rel_f = os.path.relpath(ruta_f, ruta_carpeta)
@@ -459,7 +519,7 @@ def auditar_carpeta_inmueble(ruta_carpeta: str) -> Dict[str, Any]:
 
     # 6.1. Detección de Altura Libre de Planta
     altura_detectada = None
-    m_alt = re.search(r'(?:altura\s*(?:libre|de\s*planta|de\s*techos|interior)?)\s*[:=]\s*(\d+(?:[.,]\d+)?)\s*m?', texto_acumulado, re.IGNORECASE)
+    m_alt = re.search(r'altura[\w\s]*?[:=]\s*(\d+(?:[.,]\d+)?)', texto_acumulado, re.IGNORECASE)
     if m_alt:
         try:
             altura_detectada = float(m_alt.group(1).replace(",", "."))
@@ -475,6 +535,14 @@ def auditar_carpeta_inmueble(ruta_carpeta: str) -> Dict[str, Any]:
 
     # 6.3. Solución de Ventanas y Huecos
     solucion_ventanas = "Aluminio lacado con RPT y doble vidrio Climalit (4/12/4)" if ("climalit" in t_low or "rpt" in t_low) else "Solución constructiva según antigüedad"
+    huecos_desde_notas = extraer_huecos_de_texto(texto_acumulado)
+    if huecos_desde_notas and (not datos_planos or datos_planos.get("num_ventanas_detectadas", 0) == 0):
+        if not datos_planos:
+            datos_planos = {}
+        datos_planos["ventanas"] = huecos_desde_notas
+        datos_planos["num_ventanas_detectadas"] = sum(h.get("cantidad", 1) for h in huecos_desde_notas)
+        datos_planos["superficie_huecos_total_m2"] = round(sum(h.get("area_total_m2", 0) for h in huecos_desde_notas), 2)
+        datos_planos["fuente_huecos"] = "Acotaciones de huecos en NOTAS_VISITA.txt"
 
     # 6.4. Fotos del Inmueble y Plano de Situación
     fotos_inmueble = [f for f in archivos_por_categoria["fotos"] if f.lower().endswith((".jpg", ".jpeg", ".png", ".webp")) and not any(ign in f.upper() for ign in ["FALLO", "ERROR", "CAPTURA", "SCREENSHOT"])]
@@ -750,7 +818,31 @@ def certificar_inmueble_desde_carpeta(
     pdf_oficial_generado = os.path.join(out_dir, "Certificado_Oficial_Registro.pdf")
     pdf_informe_final = os.path.join(out_dir, "Informe_Certificacion_Energetica.pdf")
     if os.path.exists(pdf_oficial_generado):
-        shutil.copy2(pdf_oficial_generado, pdf_informe_final)
+        if os.path.abspath(pdf_oficial_generado) != os.path.abspath(pdf_informe_final):
+            if os.path.exists(pdf_informe_final):
+                os.remove(pdf_informe_final)
+            shutil.move(pdf_oficial_generado, pdf_informe_final)
+
+    # 4.1. Limpieza automática de duplicados nominativos y logs de 0 bytes en CERTIFICADO/
+    for arch in os.listdir(out_dir):
+        p_arch = os.path.join(out_dir, arch)
+        if arch.endswith(".log"):
+            try:
+                if os.path.getsize(p_arch) == 0:
+                    os.remove(p_arch)
+            except Exception:
+                pass
+        if arch.startswith("Certificado_") and arch not in ["Certificado_Oficial_Registro.xml"]:
+            if arch.endswith((".xml", ".cex", ".pdf")):
+                try:
+                    os.remove(p_arch)
+                except Exception:
+                    pass
+        if arch.startswith("Proyecto_") and arch != "Proyecto_CE3X.cex":
+            try:
+                os.remove(p_arch)
+            except Exception:
+                pass
 
     # 5. Generar Paquetes de Mejora y Dictamen NextGen (PDF y Markdown)
     mejoras = calcular_paquetes_medidas_mejora(proyecto, res_cal)
