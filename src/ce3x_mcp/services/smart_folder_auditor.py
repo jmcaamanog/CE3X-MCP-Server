@@ -695,7 +695,8 @@ def certificar_inmueble_desde_carpeta(
     orientacion_principal: str = "Sur",
     tipo_calefaccion: Optional[str] = None,
     tipo_acs: Optional[str] = None,
-    nombre_edificio: Optional[str] = None
+    nombre_edificio: Optional[str] = None,
+    progress_callback: Optional[Any] = None
 ) -> Dict[str, Any]:
     """
     Ejecuta el ciclo integral de certificación automática a partir de la carpeta de visita:
@@ -706,6 +707,7 @@ def certificar_inmueble_desde_carpeta(
     4. Informe oficial de Medidas de Mejora RD 390/2021 y Dictamen NextGen (.pdf y .md).
     5. Ficha resumen ejecutivo de la entrega (RESUMEN_ENTREGA.txt).
     """
+    if progress_callback: progress_callback(10, 100, "Auditando carpeta y extrayendo documentos...")
     auditoria = auditar_carpeta_inmueble(ruta_carpeta)
     d = auditoria["datos_listos_para_ce3x"]
 
@@ -726,6 +728,7 @@ def certificar_inmueble_desde_carpeta(
     acs = tipo_acs or d["tipo_acs"]
 
     # 1. Cálculo de calificación simplificada
+    if progress_callback: progress_callback(40, 100, "Calculando demandas térmicas y calificación oficial...")
     calc = calcular_calificacion_energetica_simplificada(
         superficie_util=sup,
         ano_construccion=ano,

@@ -401,7 +401,68 @@ def test_ce3x_verifier_and_rigor():
     print("[PASS] test_ce3x_verifier_and_rigor (CE3X v3.2 oficial, Catastro real, escalas Localidades.xml y XML/PDF/CEX limpios)")
 
 
+def test_cache_and_progress():
+    import time
+    from ce3x_mcp.services.cache_manager import (
+        guardar_en_cache,
+        obtener_de_cache,
+        purgar_cache_expirada,
+        obtener_estadisticas_cache,
+        vaciar_cache_completa
+    )
+    from ce3x_mcp.server import gestionar_cache_ce3x, reportar_progreso_seguro
+    
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        test_db = os.path.join(tmp_dir, "test_cache.db")
+        
+        # 1. Guardar y recuperar
+        data = {"direccion": "Rua Mayor 1", "superficie": 100.0}
+        saved = guardar_en_cache("catastro", "1234567AB1234C0001XY", data, ttl_segundos=100.0, db_path=test_db)
+        assert saved is True
+        
+        rec = obtener_de_cache("catastro", "1234567AB1234C0001XY", db_path=test_db)
+        assert rec is not None
+        assert rec["cache_hit"] is True
+        assert rec["direccion"] == "Rua Mayor 1"
+        assert rec["superficie"] == 100.0
+        
+        # 2. Comprobar estadísticas
+        stats = obtener_estadisticas_cache(db_path=test_db)
+        assert stats["total_entradas"] == 1
+        assert stats["desglose_por_categoria"].get("catastro") == 1
+        
+        # 3. Expiración de TTL
+        guardar_en_cache("test_exp", "KEY_EXP", {"val": 1}, ttl_segundos=0.01, db_path=test_db)
+        time.sleep(0.05)
+        rec_exp = obtener_de_cache("test_exp", "KEY_EXP", db_path=test_db)
+        assert rec_exp is None
+        
+        # 4. Vaciar categoría y vaciar todo
+        vaciadas = vaciar_cache_completa(categoria="catastro", db_path=test_db)
+        assert vaciadas == 1
+        stats_vacias = obtener_estadisticas_cache(db_path=test_db)
+        assert stats_vacias["total_entradas"] == 0
+        
+        # 5. Probar tool gestionar_cache_ce3x
+        res_tool = gestionar_cache_ce3x(accion="estadisticas")
+        assert "total_entradas" in res_tool
+        
+        # 6. Probar telemetría de progreso con Mock Context
+        class MockContext:
+            def __init__(self):
+                self.events = []
+            async def report_progress(self, progress, total, message):
+                self.events.append((progress, total, message))
+                
+        mock_ctx = MockContext()
+        reportar_progreso_seguro(mock_ctx, 50, 100, "Prueba telemetría")
+        assert len(mock_ctx.events) == 1
+        assert mock_ctx.events[0] == (50, 100, "Prueba telemetría")
+        
+    print("[PASS] test_cache_and_progress (Caché persistente SQLite, TTL, purga, estadísticas y Context FastMCP)")
+
 if __name__ == "__main__":
+    test_cache_and_progress()
     test_ce3x_verifier_and_rigor()
     test_libraries()
     test_smart_folder_auditor()

@@ -22,6 +22,12 @@ def consultar_catastro_por_rc(referencia_catastral: str) -> Dict[str, Any]:
             "valido": False,
             "error": "La referencia catastral proporcionada está vacía."
         }
+        
+    # Comprobar caché local SQLite antes de consultar la red
+    from ce3x_mcp.services.cache_manager import obtener_de_cache, guardar_en_cache
+    cached = obtener_de_cache("catastro", rc)
+    if cached:
+        return cached
 
     # Detección de regímenes forales especiales
     if len(rc) == 29:
@@ -103,7 +109,7 @@ def consultar_catastro_por_rc(referencia_catastral: str) -> Dict[str, Any]:
             except ValueError:
                 pass
 
-        return {
+        resultado = {
             "valido": True,
             "referencia_catastral": rc,
             "direccion": ldt.text.strip() if ldt is not None and ldt.text else "No identificada",
@@ -117,6 +123,8 @@ def consultar_catastro_por_rc(referencia_catastral: str) -> Dict[str, Any]:
             "unidades_constructivas": unidades,
             "fuente": "Sede Electrónica del Catastro (OVC Oficial)"
         }
+        guardar_en_cache("catastro", rc, resultado, ttl_segundos=2592000.0)
+        return resultado
     except Exception as e:
         return {
             "valido": False,

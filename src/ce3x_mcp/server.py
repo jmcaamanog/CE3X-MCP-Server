@@ -1,8 +1,8 @@
 try:
-    from fastmcp import FastMCP
+    from fastmcp import FastMCP, Context
 except ImportError:
     try:
-        from mcp.server.fastmcp import FastMCP
+        from mcp.server.fastmcp import FastMCP, Context
     except ImportError:
         class FastMCP:
             def __init__(self, name: str, description: str = ""):
@@ -22,10 +22,27 @@ except ImportError:
                 return decorator
             def run(self):
                 print(f"FastMCP {self.name} iniciado.")
+        class Context:  # type: ignore
+            async def report_progress(self, progress: float, total: Optional[float] = None, message: Optional[str] = None) -> None: pass
+            async def info(self, message: str, **kwargs: Any) -> None: pass
 from typing import Optional, Dict, Any, List
 import os
 import tempfile
 import shutil
+import asyncio
+
+def reportar_progreso_seguro(ctx: Any, progreso: float, total: float, mensaje: str) -> None:
+    """Envía telemetría de progreso a FastMCP de forma segura y no bloqueante."""
+    if ctx is None or not hasattr(ctx, "report_progress"):
+        return
+    try:
+        try:
+            loop = asyncio.get_running_loop()
+            loop.create_task(ctx.report_progress(progreso, total, mensaje))
+        except RuntimeError:
+            asyncio.run(ctx.report_progress(progreso, total, mensaje))
+    except Exception:
+        pass
 
 from ce3x_mcp.core.models import (
     ProyectoCertificacion,
@@ -178,21 +195,27 @@ def calcular_calificacion_energetica(
     }
 
 @mcp.tool()
-def analizar_modelo_bim_ifc(ifc_path: str) -> Dict[str, Any]:
+def analizar_modelo_bim_ifc(ifc_path: str, ctx: Optional[Context] = None) -> Dict[str, Any]:
     """
     Abre y analiza un modelo BIM IFC (IFC2X3 o IFC4) mediante IfcOpenShell, extrayendo
     las superficies útiles de estancias (IfcSpace), muros de fachada exterior (IfcWall)
     y carpinterías exteriores (IfcWindow/IfcDoor) para su integración en CE3X.
     """
-    return extraer_envolvente_desde_ifc(ifc_path)
+    reportar_progreso_seguro(ctx, 20, 100, f"Cargando modelo BIM IFC {os.path.basename(ifc_path)}...")
+    res = extraer_envolvente_desde_ifc(ifc_path)
+    reportar_progreso_seguro(ctx, 100, 100, "Cubicación y análisis BIM finalizado.")
+    return res
 
 @mcp.tool()
-def analizar_plano_arquitectura_pdf(pdf_path: str) -> Dict[str, Any]:
+def analizar_plano_arquitectura_pdf(pdf_path: str, ctx: Optional[Context] = None) -> Dict[str, Any]:
     """
     Abre y analiza un plano arquitectónico en PDF mediante PyMuPDF, extrayendo
     superficies útiles de estancias (m²) y cuadros de carpintería de huecos y ventanas.
     """
-    return analizar_plano_distribucion_pdf(pdf_path)
+    reportar_progreso_seguro(ctx, 20, 100, f"Analizando plano vectorial {os.path.basename(pdf_path)}...")
+    res = analizar_plano_distribucion_pdf(pdf_path)
+    reportar_progreso_seguro(ctx, 100, 100, "Extracción de plano arquitectónico finalizada.")
+    return res
 
 @mcp.tool()
 def analizar_ficha_equipo_clima(descripcion_o_ficha: str) -> Dict[str, Any]:
@@ -223,13 +246,15 @@ def proponer_medidas_mejora_rd390(
     ano_construccion: int,
     zona_climatica: str = "C1",
     tipo_calefaccion: str = "EfectoJoule",
-    tipo_acs: str = "EfectoJoule"
+    tipo_acs: str = "EfectoJoule",
+    ctx: Optional[Context] = None
 ) -> Dict[str, Any]:
     """
     Genera automáticamente los 3 paquetes de medidas de mejora exigidos por el Real Decreto 390/2021
     (Envolvente SATE + Carpinterías, Aerotermia y Solución Integral con Fotovoltaica),
     calculando la inversión estimada (€), el ahorro en factura (€/año), la nueva letra energética y el retorno (payback).
     """
+    reportar_progreso_seguro(ctx, 35, 100, "Calculando demanda y balance térmico oficial...")
     calc = calcular_calificacion_energetica(
         superficie_util=superficie_util,
         ano_construccion=ano_construccion,
@@ -335,7 +360,8 @@ def generar_certificado_completo(
     tipo_acs: Optional[str] = None,
     referencia_catastral: Optional[str] = None,
     directorio_salida: Optional[str] = None,
-    tipologia: str = "Bloque"
+    tipologia: str = "Bloque",
+    ctx: Optional[Context] = None
 ) -> Dict[str, Any]:
     """
     Genera el conjunto completo de entregables oficiales para el certificado energético:
@@ -347,6 +373,7 @@ def generar_certificado_completo(
     os.makedirs(out_dir, exist_ok=True)
     
     # 0. Verificación preceptiva de la instalación oficial de CE3X v3.2
+    reportar_progreso_seguro(ctx, 10, 100, "Verificando instalación oficial de CE3X v3.2...")
     ce3x_check = verificar_instalacion_ce3x()
     if not ce3x_check.get("instalado"):
         return {
@@ -443,6 +470,7 @@ def generar_certificado_completo(
     es_carpeta_cert = os.path.basename(os.path.normpath(out_dir)).upper() == "CERTIFICADO"
 
     # 1. Generar XML Oficial Limpio (validado RelaxNG, sin Centro Juvenil ni 1006 kW)
+    reportar_progreso_seguro(ctx, 75, 100, "Compilando XML v3.0 RelaxNG y PDF con Typst...")
     xml_content = generar_xml_oficial_30(proyecto, res)
     if es_carpeta_cert:
         xml_path = os.path.join(out_dir, "Certificado_Oficial_Registro.xml")
@@ -521,14 +549,17 @@ def organizar_carpeta_visita(ruta_carpeta: str) -> Dict[str, Any]:
     return organizar_carpeta_visita_impl(ruta_carpeta)
 
 @mcp.tool()
-def auditar_carpeta_visita(ruta_carpeta: str) -> Dict[str, Any]:
+def auditar_carpeta_visita(ruta_carpeta: str, ctx: Optional[Context] = None) -> Dict[str, Any]:
     """
     Audita de forma autónoma una carpeta de visita técnica (croquis, notas, planos PDF,
     imágenes, modelos BIM), extrae datos catastrales y arquitectónicos, deduce la envolvente
     según normativa histórica y genera las preguntas quirúrgicas para el técnico antes de certificar.
     Define automáticamente la subcarpeta 'CERTIFICADO/' para la entrega final.
     """
-    return auditar_carpeta_inmueble(ruta_carpeta)
+    reportar_progreso_seguro(ctx, 20, 100, f"Explorando documentos en {os.path.basename(ruta_carpeta)}...")
+    res = auditar_carpeta_inmueble(ruta_carpeta)
+    reportar_progreso_seguro(ctx, 100, 100, "Auditoría de carpeta completada.")
+    return res
 
 @mcp.tool()
 def certificar_desde_carpeta_visita(
@@ -536,7 +567,8 @@ def certificar_desde_carpeta_visita(
     orientacion_principal: str = "Sur",
     tipo_calefaccion: Optional[str] = None,
     tipo_acs: Optional[str] = None,
-    nombre_edificio: Optional[str] = None
+    nombre_edificio: Optional[str] = None,
+    ctx: Optional[Context] = None
 ) -> Dict[str, Any]:
     """
     Certifica de forma automática el inmueble a partir de la carpeta de visita.
@@ -546,12 +578,17 @@ def certificar_desde_carpeta_visita(
     3. Informe oficial de 15 páginas compilado con Typst (.pdf).
     4. Informe de Medidas de Mejora RD 390/2021 y Dictamen NextGen (.md / .pdf).
     """
+    def cb(prog: float, tot: float, msg: str) -> None:
+        reportar_progreso_seguro(ctx, prog, tot, msg)
+        
+    reportar_progreso_seguro(ctx, 5, 100, f"Iniciando certificación de {os.path.basename(ruta_carpeta)}...")
     return certificar_inmueble_desde_carpeta(
         ruta_carpeta=ruta_carpeta,
         orientacion_principal=orientacion_principal,
         tipo_calefaccion=tipo_calefaccion,
         tipo_acs=tipo_acs,
-        nombre_edificio=nombre_edificio
+        nombre_edificio=nombre_edificio,
+        progress_callback=cb
     )
 
 @mcp.tool()
@@ -889,6 +926,44 @@ Para la vivienda o edificio analizado, realiza los siguientes cálculos:
 2. Identifica el tramo de ayuda según el porcentaje de ahorro conseguido: 40%, 65% u 80% (o hasta 100% en vulnerabilidad).
 3. Calcula la deducción en el IRPF correspondiente (40% o 60% en rehabilitación integral).
 4. Emite el dictamen técnico justificativo oficial listo para registrar ante la administración autonómica."""
+
+@mcp.tool()
+def gestionar_cache_ce3x(accion: str = "estadisticas", categoria: Optional[str] = None) -> Dict[str, Any]:
+    """
+    Gestiona el subsistema de caché persistente SQLite local (~/.ce3x_mcp/cache.db).
+    Acelera consultas recurrentes a Catastro (OVC) y radiación solar (PVGIS) a menos de 5 ms.
+    
+    Parámetros:
+    - accion: 'estadisticas' (default), 'purgar_expiradas' o 'vaciar_todo'.
+    - categoria: opcional, filtrar por 'catastro' o 'pvgis'.
+    """
+    from ce3x_mcp.services.cache_manager import (
+        obtener_estadisticas_cache,
+        purgar_cache_expirada,
+        vaciar_cache_completa
+    )
+    act = accion.strip().lower()
+    if act == "estadisticas":
+        stats = obtener_estadisticas_cache()
+        stats["accion_ejecutada"] = "estadisticas"
+        return stats
+    elif act == "purgar_expiradas":
+        purgadas = purgar_cache_expirada()
+        stats = obtener_estadisticas_cache()
+        stats["accion_ejecutada"] = "purgar_expiradas"
+        stats["entradas_eliminadas"] = purgadas
+        return stats
+    elif act == "vaciar_todo":
+        vaciadas = vaciar_cache_completa(categoria)
+        stats = obtener_estadisticas_cache()
+        stats["accion_ejecutada"] = "vaciar_todo"
+        stats["entradas_eliminadas"] = vaciadas
+        return stats
+    else:
+        return {
+            "error": f"Acción desconocida '{accion}'. Use 'estadisticas', 'purgar_expiradas' o 'vaciar_todo'.",
+            "acciones_validas": ["estadisticas", "purgar_expiradas", "vaciar_todo"]
+        }
 
 def main():
     mcp.run()

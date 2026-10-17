@@ -16,6 +16,12 @@ def calcular_produccion_solar_pvgis(
     la producción anual y mensual de energía solar fotovoltaica con datos satelitales SARAH-2.
     - azimut_grados: 0 para Sur, 90 para Oeste, -90 para Este, 180 para Norte.
     """
+    from ce3x_mcp.services.cache_manager import obtener_de_cache, guardar_en_cache
+    cache_key = f"{latitud:.3f}_{longitud:.3f}_{potencia_pico_kw:.2f}_{inclinacion_grados:.1f}_{azimut_grados:.1f}_{perdidas_sistema_pct:.1f}"
+    cached = obtener_de_cache("pvgis", cache_key)
+    if cached:
+        return cached
+
     params = {
         "lat": latitud,
         "lon": longitud,
@@ -41,7 +47,7 @@ def calcular_produccion_solar_pvgis(
                 for m in monthly
             ]
             
-            return {
+            resultado_pvgis = {
                 "valido": True,
                 "potencia_pico_kw": potencia_pico_kw,
                 "produccion_anual_kwh": round(produccion_anual_kwh, 2),
@@ -49,6 +55,8 @@ def calcular_produccion_solar_pvgis(
                 "produccion_mensual_desglosada": meses,
                 "fuente": "PVGIS (Joint Research Centre - Comisión Europea)"
             }
+            guardar_en_cache("pvgis", cache_key, resultado_pvgis, ttl_segundos=7776000.0) # 90 días
+            return resultado_pvgis
         else:
             # Fallback en caso de corte o respuesta no 200: estimación analítica según latitud
             horas_sol_equivalentes = 1450.0 if latitud > 40.0 else 1700.0
