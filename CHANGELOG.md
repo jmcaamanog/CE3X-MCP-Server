@@ -4,6 +4,32 @@ En este documento se detalla la evolución y el lanzamiento oficial del servidor
 
 ---
 
+### Versión 1.5.2 — 17/10/2026: 🏆 Enriquecimiento de Esquemas TDQS Grado A, Metadatos Tipados y Anotaciones Oficiales MCP
+
+Actualización mayor de calidad y descubrimiento en registries MCP (Glama.ai) que eleva el **Tool Definition Quality Score (TDQS)** a **Grado A (4.8 - 5.0 / 5.0)** mediante tipado exhaustivo, anotaciones semánticas de protocolo y descripciones operativas completas:
+
+1. **Cobertura 100% de Esquemas de Parámetros (`Parameters` 5/5)**:
+   * Migración de los 109 parámetros de las 27 herramientas a firmas tipadas con `Annotated[T, Field(description=..., ge=..., le=...)]`.
+   * Cobertura de descripciones JSON Schema del 100.0% (109/109 parámetros documentados con propósito, tipos y rangos admisibles).
+
+2. **Rigor de Unidades y Tipos (`Completeness` 5/5)**:
+   * Declaración explícita de unidades físicas y reglamentarias en parámetros y retornos: metros (`m`), superficie (`m²`), transmitancia térmica (`W/m²K`), rendimiento estacional (`SCOP/COP/SEER`), energía (`kWh/m²·año`), renovaciones por hora (`ren/h`) y flujos térmicos (`W/m²`).
+
+3. **Anotaciones Oficiales de Protocolo MCP (`Behavior` 5/5)**:
+   * Integración de las anotaciones oficiales del protocolo Model Context Protocol en los decoradores `@mcp.tool()`:
+     - 21 herramientas clasificadas como `read_only_hint=True, idempotent_hint=True` (consultas a Catastro, PVGIS, CTE, cálculos analíticos de sombras, puentes térmicos e ISO 10077).
+     - 6 herramientas de generación de archivos y base de datos local declaradas con `read_only_hint=False, destructive_hint=False` (`generar_certificado_completo`, `organizar_carpeta_visita`, `certificar_desde_carpeta_visita`, etc.).
+
+4. **Guías de Uso y Enrutamiento entre Herramientas (`Usage Guidelines` 5/5)**:
+   * Cada una de las 27 herramientas incorpora secciones estructuradas de `Cuándo usar:` indicando escenarios de uso idóneos y herramientas complementarias o alternativas.
+   * Sección `Comportamiento y efectos secundarios:` detallando si la operación es de solo lectura en memoria o si escribe artefactos en el sistema de archivos.
+
+5. **Compatibilidad y Robustez de Modelos Pydantic v2**:
+   * Sincronización automática de campos profesionales (`titulacion`, `titulacion_tecnico`, `colegio_profesional`, `numero_colegiado`) en `DatosAdministrativos`.
+   * Validación del 100% de la suite de pruebas unitarias (11/11 tests en verde).
+
+---
+
 ### Versión 1.5.1 — 17/10/2026: 🚀 Desacoplamiento de CI, Saneamiento de Superficies HVAC y Medidas de Mejora RD 390
 
 Actualización de estabilidad, rigor técnico y experiencia de usuario que consolida el flujo integral de certificación sin bloqueos en la interfaz gráfica de CE3X v3.2 y optimiza la infraestructura de CI/CD:

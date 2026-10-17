@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, model_validator
 from typing import List, Optional, Literal
 
 class DatosAdministrativos(BaseModel):
@@ -11,6 +11,9 @@ class DatosAdministrativos(BaseModel):
     referencia_catastral: Optional[str] = Field(None, description="Referencia catastral (20 caracteres)")
     tipo_alcance: Literal["EdificioCompleto", "ViviendaIndividual", "ParteEdificio"] = "ViviendaIndividual"
     titulacion_tecnico: str = "Arquitecto Técnico"
+    titulacion: Optional[str] = None
+    colegio_profesional: Optional[str] = None
+    numero_colegiado: Optional[str] = None
     nombre_tecnico: str = "Técnico Certificador Colegiado"
     nif_tecnico: Optional[str] = "00000000T"
     razon_social: Optional[str] = None
@@ -20,6 +23,12 @@ class DatosAdministrativos(BaseModel):
     municipio_tecnico: Optional[str] = "A Coruña"
     provincia_tecnico: Optional[str] = "A Coruña"
     codigo_postal_tecnico: Optional[str] = "15001" 
+
+    @model_validator(mode="after")
+    def sync_titulacion(self):
+        if self.titulacion:
+            self.titulacion_tecnico = self.titulacion
+        return self
 
 class DatosGenerales(BaseModel):
     tipologia: Literal["Unifamiliar", "Bloque", "ViviendaBloque", "PequenoTerciario", "GranTerciario"] = "ViviendaBloque"

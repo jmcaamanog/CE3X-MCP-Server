@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 try:
     from fastmcp import FastMCP, Context
 except ImportError:
@@ -9,7 +10,7 @@ except ImportError:
                 self.name = name
                 self.description = description
                 self.tools = {}
-            def tool(self):
+            def tool(self, **kwargs):
                 def decorator(func):
                     self.tools[func.__name__] = func
                     return func
@@ -20,12 +21,13 @@ except ImportError:
             def prompt(self):
                 def decorator(func): return func
                 return decorator
-            def run(self):
+            def run(self, **kwargs):
                 print(f"FastMCP {self.name} iniciado.")
         class Context:  # type: ignore
             async def report_progress(self, progress: float, total: Optional[float] = None, message: Optional[str] = None) -> None: pass
             async def info(self, message: str, **kwargs: Any) -> None: pass
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Annotated, Union
+from pydantic import Field
 import os
 import tempfile
 import shutil
@@ -92,7 +94,6 @@ from ce3x_mcp.services.libraries import (
     inferir_solucion_envolvente_por_ano
 )
 
-# Instancia oficial del servidor FastMCP con compatibilidad hacia atrás
 INSTRUCCIONES_SERVIDOR = (
     "Servidor MCP Oficial para Certificación Energética de Edificios en España (CE3X v3.2 / CTE DB-HE / RD 390/2021).\n\n"
     "PRINCIPIOS FUNDAMENTALES DE RIGOR TÉCNICO Y VERACIDAD:\n"
@@ -114,19 +115,56 @@ except TypeError:
     except TypeError:
         mcp = FastMCP("CE3X-MCP-Server")
 
-@mcp.tool()
-def consultar_catastro(referencia_catastral: str) -> Dict[str, Any]:
-    """
-    Consulta telemática a la Sede Electrónica del Catastro de España para obtener
-    dirección oficial, municipio, provincia y código postal a partir de la Referencia Catastral.
+# ==============================================================================
+# HERRAMIENTAS OFICIALES MCP (27 TOOLS - GRADO A TDQS ENRIQUECIDO)
+# ==============================================================================
+
+DESC_CATASTRO = """Consulta telemática a la Sede Electrónica del Catastro de España para obtener dirección oficial, municipio, provincia, año de construcción y superficie catastral.
+
+Cuándo usar:
+    Invoque esta herramienta como primer paso ante cualquier inmueble en territorio español común cuando disponga de la Referencia Catastral para auto-rellenar los datos administrativos y de partida del certificado.
+
+Comportamiento y efectos secundarios:
+    Operación de consulta externa telemática (Read-Only) con caché persistente SQLite local (TTL de 30 días). No altera archivos ni estado local."""
+
+@mcp.tool(description=DESC_CATASTRO, annotations={"read_only_hint": True, "idempotent_hint": True})
+def consultar_catastro(
+    referencia_catastral: Annotated[str, Field(description="Referencia Catastral oficial del inmueble (14 o 20 caracteres alfanuméricos, ej. '8014008NJ4081S0003RF').")]
+) -> Dict[str, Any]:
+    """Consulta telemática a la Sede Electrónica del Catastro de España.
+    
+    Args:
+        referencia_catastral: Código oficial alfanumérico del Catastro inmobiliario de España.
+        
+    Returns:
+        Diccionario con dirección, municipio, provincia, código postal, año de construcción, superficie construida y estado de éxito.
     """
     return consultar_catastro_por_rc(referencia_catastral)
 
-@mcp.tool()
-def determinar_zona_climatica(provincia: str, municipio: str, altitud_m: float = 0.0) -> Dict[str, str]:
-    """
-    Determina la zona climática CTE DB-HE (ej. C1, D3, A3, E1) en función de la provincia,
-    municipio y altitud sobre el nivel del mar.
+
+DESC_ZONA_CLIMATICA = """Determina la zona climática CTE DB-HE oficial (ej. C1, D3, A3, E1) en función de la provincia, municipio y altitud sobre el nivel del mar según las tablas oficiales del Código Técnico de la Edificación (Apéndice B).
+
+Cuándo usar:
+    Invoque esta herramienta de forma obligatoria antes de estimar transmitancias o calcular la calificación energética para fijar la severidad climática de invierno y verano del emplazamiento.
+
+Comportamiento y efectos secundarios:
+    Operación analítica de solo lectura (Read-Only). No requiere conexión con CE3X ni modifica archivos en disco."""
+
+@mcp.tool(description=DESC_ZONA_CLIMATICA, annotations={"read_only_hint": True, "idempotent_hint": True})
+def determinar_zona_climatica(
+    provincia: Annotated[str, Field(description="Nombre oficial de la provincia española (ej. 'Madrid', 'A Coruña', 'Sevilla', 'Barcelona').")],
+    municipio: Annotated[str, Field(description="Nombre oficial del municipio correspondiente a la provincia.")],
+    altitud_m: Annotated[float, Field(description="Altitud del inmueble sobre el nivel del mar en metros (m). Por defecto 0.0.", ge=-50.0, le=4000.0)] = 0.0
+) -> Dict[str, str]:
+    """Determina la zona climática CTE DB-HE oficial.
+    
+    Args:
+        provincia: Nombre oficial de la provincia española.
+        municipio: Nombre oficial del municipio.
+        altitud_m: Altitud en metros sobre el nivel del mar.
+        
+    Returns:
+        Diccionario con provincia, municipio, altitud y código de zona climática oficial (ej. 'D3').
     """
     zona = obtener_zona_climatica(provincia, municipio, altitud_m)
     return {
@@ -136,40 +174,84 @@ def determinar_zona_climatica(provincia: str, municipio: str, altitud_m: float =
         "zona_climatica_cte": zona
     }
 
-@mcp.tool()
-def estimar_envolvente_por_defecto(ano_construccion: int, zona_climatica: str = "C1") -> Dict[str, Any]:
-    """
-    Estima las transmitancias térmicas (U en W/m²K) de fachadas, cubiertas y huecos
-    según el año de construcción del edificio conforme a los manuales de fundamentos técnicos de CE3X.
+
+DESC_ENVOLVENTE_DEFECTO = """Estima las transmitancias térmicas (U en W/m²K) de fachadas, cubiertas, suelos y huecos según el año de construcción del edificio y su normativa histórica aplicable (Anterior a 1979, NBE-CT-79, CTE-HE-2006, CTE-HE-2013, CTE-HE-2019).
+
+Cuándo usar:
+    Utilice esta herramienta cuando no se disponga de ensayos in situ (flujometría) ni de memorias constructivas conocidas del edificio para obtener los valores tabulados por defecto de los manuales oficiales de CE3X. Para mediciones reales in situ use 'registrar_ensayo_flujometria_termica_in_situ'.
+
+Comportamiento y efectos secundarios:
+    Operación analítica de solo lectura (Read-Only). No altera archivos ni estado persistente."""
+
+@mcp.tool(description=DESC_ENVOLVENTE_DEFECTO, annotations={"read_only_hint": True, "idempotent_hint": True})
+def estimar_envolvente_por_defecto(
+    ano_construccion: Annotated[int, Field(description="Año de construcción del edificio según Catastro o escritura (ej. 1975, 1995, 2012).", ge=1800, le=2050)],
+    zona_climatica: Annotated[str, Field(description="Zona climática CTE DB-HE asignada (ej. 'A3', 'B4', 'C1', 'D3', 'E1').")] = "C1"
+) -> Dict[str, Any]:
+    """Estima transmitancias térmicas de envolvente por defecto según normativa histórica.
+    
+    Args:
+        ano_construccion: Año de edificación del inmueble.
+        zona_climatica: Zona climática oficial del CTE DB-HE.
+        
+    Returns:
+        Diccionario con normativa aplicable, transmitancias estimadas (fachada, cubierta, suelo, huecos) y tipologías constructivas asociadas.
     """
     return estimar_transmitancias_por_ano(ano_construccion, zona_climatica)
 
 
-@mcp.tool()
-def verificar_conexion_ce3x(directorio_ce3x: Optional[str] = None) -> Dict[str, Any]:
-    """
-    Verifica y testea de forma exhaustiva la instalación y conectividad con el software oficial CE3X v3.2:
-    1. Comprueba la presencia del ejecutable principal CE3Xv3.2.exe.
-    2. Comprueba el compilador oficial de PDF xml2cert.exe (Typst 0.13.1).
-    3. Comprueba el validador oficial de RelaxNG xmlcheck.exe y el esquema DatosEnergeticosDelEdificioSchema30-full.rng.
-    4. Comprueba la base de datos de escalas oficiales y edificios de referencia (Escala/Localidades.xml) para 32 zonas climáticas.
-    5. Comprueba los motores climáticos (Calculos/BDClima) y entornos auxiliares (Java para Jing).
+DESC_VERIFICAR_CE3X = """Verifica y testea de forma exhaustiva la instalación y conectividad con el software oficial CE3X v3.2 (ejecutables, motores climáticos, validador XML RelaxNG y escalas oficiales).
+
+Cuándo usar:
+    Invoque esta herramienta durante el arranque inicial o en pruebas de diagnóstico del entorno para verificar la presencia de CE3Xv3.2.exe, xml2cert.exe y xmlcheck.exe.
+
+Comportamiento y efectos secundarios:
+    Operación de diagnóstico de solo lectura (Read-Only). Inspecciona el sistema de archivos local sin alterar configuraciones ni registrar escrituras."""
+
+@mcp.tool(description=DESC_VERIFICAR_CE3X, annotations={"read_only_hint": True, "idempotent_hint": True})
+def verificar_conexion_ce3x(
+    directorio_ce3x: Annotated[Optional[str], Field(description="Ruta absoluta al directorio de instalación de CE3X v3.2. Si es None, autodetecta en 'C:\\Program Files (x86)\\CE3Xv3.2'.")] = None
+) -> Dict[str, Any]:
+    """Verifica la instalación y motores oficiales de CE3X v3.2.
+    
+    Args:
+        directorio_ce3x: Ruta personalizada opcional a la carpeta de CE3X.
+        
+    Returns:
+        Diccionario con el estado de conexión de cada componente oficial y ruta detectada.
     """
     return verificar_instalacion_ce3x(directorio_ce3x)
 
-@mcp.tool()
+
+DESC_CALC_CALIFICACION = """Calcula la demanda energética estimada, consumo de energía primaria no renovable, emisiones de CO2 y asigna las letras de calificación energética oficiales (A a G) conectando directamente con las escalas y edificios de referencia de CE3X (Escala/Localidades.xml).
+
+Cuándo usar:
+    Utilice esta herramienta para pre-calificar rápidamente un inmueble y verificar la letra energética antes de generar el paquete documental definitivo con 'generar_certificado_completo'.
+
+Comportamiento y efectos secundarios:
+    Operación analítica de solo lectura (Read-Only). Conecta con las bases de datos de CE3X sin modificar archivos ni registrar persistencia."""
+
+@mcp.tool(description=DESC_CALC_CALIFICACION, annotations={"read_only_hint": True, "idempotent_hint": True})
 def calcular_calificacion_energetica(
-    superficie_util: float,
-    ano_construccion: int,
-    zona_climatica: str = "C1",
-    tipo_calefaccion: Optional[str] = None,
-    tipo_acs: Optional[str] = None,
-    tipologia: str = "Bloque"
+    superficie_util: Annotated[float, Field(description="Superficie útil habitable del edificio o vivienda en metros cuadrados (m²).", gt=0.0)],
+    ano_construccion: Annotated[int, Field(description="Año de construcción catastral del edificio.", ge=1800, le=2050)],
+    zona_climatica: Annotated[str, Field(description="Zona climática CTE DB-HE (ej. 'C1', 'D3', 'E1').")] = "C1",
+    tipo_calefaccion: Annotated[Optional[str], Field(description="Tipo o vector energético de la calefacción: 'EfectoJoule', 'GasNatural', 'Gasoleo', 'Biomasa', 'BombaCalor', o None.")] = None,
+    tipo_acs: Annotated[Optional[str], Field(description="Tipo o vector energético del ACS: 'EfectoJoule', 'GasNatural', 'Gasoleo', 'BombaCalor', o None.")] = None,
+    tipologia: Annotated[str, Field(description="Tipología edificatoria: 'Bloque', 'Unifamiliar' o 'Terciario'.")] = "Bloque"
 ) -> Dict[str, Any]:
-    """
-    Calcula la demanda energética estimada, consumo de energía primaria no renovable,
-    emisiones de CO2 y asigna las letras de calificación energética oficiales (A a G)
-    conectando directamente con las escalas y edificios de referencia de CE3X (Escala/Localidades.xml).
+    """Calcula la calificación energética reglamentaria según escalas oficiales CE3X.
+    
+    Args:
+        superficie_util: Superficie útil habitable en m².
+        ano_construccion: Año de construcción del edificio.
+        zona_climatica: Código de zona climática CTE.
+        tipo_calefaccion: Vector energético de calefacción.
+        tipo_acs: Vector energético de ACS.
+        tipologia: Tipo de inmueble ('Bloque', 'Unifamiliar', 'Terciario').
+        
+    Returns:
+        Diccionario con demandas de calefacción/refrigeración/ACS, consumo C_epnr, emisiones CO2 y letras oficiales (A-G).
     """
     res = calcular_calificacion_energetica_simplificada(
         superficie_util=superficie_util,
@@ -194,65 +276,146 @@ def calcular_calificacion_energetica(
         "aviso_normativo": res.get("aviso_normativo")
     }
 
-@mcp.tool()
-def analizar_modelo_bim_ifc(ifc_path: str, ctx: Optional[Context] = None) -> Dict[str, Any]:
-    """
-    Abre y analiza un modelo BIM IFC (IFC2X3 o IFC4) mediante IfcOpenShell, extrayendo
-    las superficies útiles de estancias (IfcSpace), muros de fachada exterior (IfcWall)
-    y carpinterías exteriores (IfcWindow/IfcDoor) para su integración en CE3X.
+
+DESC_BIM_IFC = """Abre y analiza un modelo BIM IFC mediante IfcOpenShell, extrayendo automáticamente las superficies útiles de estancias (IfcSpace), muros de fachada exterior (IfcWall) y carpinterías exteriores (IfcWindow/IfcDoor) para su integración en CE3X.
+
+Cuándo usar:
+    Invoque esta herramienta cuando disponga del modelo tridimensional BIM del proyecto (Revit, Archicad, Allplan, CYPE) para automatizar la cubicación de la envolvente térmica. Para planos 2D en papel o PDF use 'analizar_plano_arquitectura_pdf'.
+
+Comportamiento y efectos secundarios:
+    Operación de lectura y cubicación geométrica (Read-Only). No altera el archivo IFC original. Emite progreso interactivo a FastMCP."""
+
+@mcp.tool(description=DESC_BIM_IFC, annotations={"read_only_hint": True, "idempotent_hint": True})
+def analizar_modelo_bim_ifc(
+    ifc_path: Annotated[str, Field(description="Ruta absoluta o relativa al archivo de modelo BIM en formato IFC (.ifc, IFC2X3 o IFC4).")],
+    ctx: Optional[Context] = None
+) -> Dict[str, Any]:
+    """Cubicación y análisis de envolvente térmica desde modelo BIM IFC.
+    
+    Args:
+        ifc_path: Ruta al archivo IFC.
+        ctx: Contexto de ejecución FastMCP para telemetría.
+        
+    Returns:
+        Diccionario con superficie útil total, listado de espacios, áreas de cerramientos opacos y cuadros de huecos acristalados.
     """
     reportar_progreso_seguro(ctx, 20, 100, f"Cargando modelo BIM IFC {os.path.basename(ifc_path)}...")
     res = extraer_envolvente_desde_ifc(ifc_path)
     reportar_progreso_seguro(ctx, 100, 100, "Cubicación y análisis BIM finalizado.")
     return res
 
-@mcp.tool()
-def analizar_plano_arquitectura_pdf(pdf_path: str, ctx: Optional[Context] = None) -> Dict[str, Any]:
-    """
-    Abre y analiza un plano arquitectónico en PDF mediante PyMuPDF, extrayendo
-    superficies útiles de estancias (m²) y cuadros de carpintería de huecos y ventanas.
+
+DESC_PLANO_PDF = """Abre y analiza un plano arquitectónico en PDF vectorial mediante PyMuPDF, extrayendo superficies útiles de estancias (m²) y cuadros de carpintería de huecos y ventanas.
+
+Cuándo usar:
+    Utilice esta herramienta cuando disponga de planos de planta en PDF para extraer estancias, cotas y cuadros de ventanas. Para modelos tridimensionales IFC use 'analizar_modelo_bim_ifc'.
+
+Comportamiento y efectos secundarios:
+    Operación de lectura y parseo vectorial (Read-Only). No altera el archivo PDF de entrada. Emite progreso interactivo a FastMCP."""
+
+@mcp.tool(description=DESC_PLANO_PDF, annotations={"read_only_hint": True, "idempotent_hint": True})
+def analizar_plano_arquitectura_pdf(
+    pdf_path: Annotated[str, Field(description="Ruta absoluta o relativa al archivo PDF que contiene el plano arquitectónico de distribución.")],
+    ctx: Optional[Context] = None
+) -> Dict[str, Any]:
+    """Análisis y extracción geométrica de planos de arquitectura en PDF.
+    
+    Args:
+        pdf_path: Ruta al archivo PDF del plano.
+        ctx: Contexto de ejecución FastMCP para telemetría.
+        
+    Returns:
+        Diccionario con estancias detectadas, superficie útil calculada, escala identificada y carpinterías exteriores.
     """
     reportar_progreso_seguro(ctx, 20, 100, f"Analizando plano vectorial {os.path.basename(pdf_path)}...")
     res = analizar_plano_distribucion_pdf(pdf_path)
     reportar_progreso_seguro(ctx, 100, 100, "Extracción de plano arquitectónico finalizada.")
     return res
 
-@mcp.tool()
-def analizar_ficha_equipo_clima(descripcion_o_ficha: str) -> Dict[str, Any]:
-    """
-    Analiza la descripción o texto de la ficha técnica de un equipo térmico
-    (aerotermia, caldera de condensación, bomba de calor, termo) y extrae su potencia,
-    rendimiento estacional (SCOP/COP/SEER) y vector energético para CE3X.
+
+DESC_FICHA_EQUIPO = """Analiza la descripción textual o ficha técnica de un equipo térmico (aerotermia, caldera de condensación, bomba de calor, termo eléctrico) y extrae su potencia nominal (kW), rendimiento estacional (SCOP/COP/SEER) y vector energético para CE3X.
+
+Cuándo usar:
+    Invoque esta herramienta a partir de notas técnicas, transcripción de fotos de placas o catálogos del fabricante para parametrizar las instalaciones térmicas en CE3X.
+
+Comportamiento y efectos secundarios:
+    Operación analítica de procesamiento de lenguaje natural y extracción técnica (Read-Only). Sin efectos secundarios en disco."""
+
+@mcp.tool(description=DESC_FICHA_EQUIPO, annotations={"read_only_hint": True, "idempotent_hint": True})
+def analizar_ficha_equipo_clima(
+    descripcion_o_ficha: Annotated[str, Field(description="Texto técnico o descripción detallada de la ficha de características del equipo de climatización (ej. 'Bomba de calor aerotérmica Daikin Altherma 8 kW con SCOP 4.2').")]
+) -> Dict[str, Any]:
+    """Extracción técnica y paramétrica de equipos térmicos desde fichas o descripciones.
+    
+    Args:
+        descripcion_o_ficha: Texto descriptivo de la placa o ficha técnica.
+        
+    Returns:
+        Diccionario con tipo de equipo, potencia térmica nominal (kW), rendimiento estacional (SCOP/COP) y combustible asociado.
     """
     return analizar_datos_equipo_climatizacion(descripcion_o_ficha)
 
-@mcp.tool()
+
+DESC_PVGIS = """Calcula con precisión científica la producción de energía solar fotovoltaica (kWh/año y mensual) conectando con la API oficial PVGIS de la Comisión Europea (JRC) con radiación satelital SARAH-2.
+
+Cuándo usar:
+    Utilice esta herramienta al evaluar la integración de energía solar fotovoltaica para autoconsumo como medida de mejora o justificación CTE DB-HE5.
+
+Comportamiento y efectos secundarios:
+    Operación de consulta telemática a la API de la Comisión Europea con caché persistente SQLite local (TTL de 90 días). Read-Only."""
+
+@mcp.tool(description=DESC_PVGIS, annotations={"read_only_hint": True, "idempotent_hint": True})
 def calcular_produccion_fotovoltaica_pvgis(
-    latitud: float,
-    longitud: float,
-    potencia_pico_kw: float = 3.0,
-    inclinacion_grados: float = 35.0,
-    azimut_grados: float = 0.0
+    latitud: Annotated[float, Field(description="Latitud geográfica en grados decimales (ej. 43.3623 para A Coruña, 40.4168 para Madrid).", ge=-90.0, le=90.0)],
+    longitud: Annotated[float, Field(description="Longitud geográfica en grados decimales (ej. -8.4115 para A Coruña, -3.7038 para Madrid).", ge=-180.0, le=180.0)],
+    potencia_pico_kw: Annotated[float, Field(description="Potencia pico de la instalación solar fotovoltaica en kilovatios (kWp). Por defecto 3.0 kWp.", gt=0.0)] = 3.0,
+    inclinacion_grados: Annotated[float, Field(description="Inclinación de los módulos solares respecto a la horizontal en grados (0 a 90°). Por defecto 35.0°.", ge=0.0, le=90.0)] = 35.0,
+    azimut_grados: Annotated[float, Field(description="Orientación o azimut de los paneles: 0° Sur, 90° Oeste, -90° Este, 180° Norte. Por defecto 0.0° (Sur).", ge=-180.0, le=180.0)] = 0.0
 ) -> Dict[str, Any]:
-    """
-    Calcula con precisión científica la producción de energía solar fotovoltaica (kWh/año y mensual)
-    conectando con la API oficial PVGIS de la Comisión Europea (JRC) con radiación satelital SARAH-2.
+    """Cálculo satelital oficial PVGIS de producción solar fotovoltaica.
+    
+    Args:
+        latitud: Coordenada de latitud en grados decimales.
+        longitud: Coordenada de longitud en grados decimales.
+        potencia_pico_kw: Potencia pico de paneles en kWp.
+        inclinacion_grados: Grados de inclinación de los módulos.
+        azimut_grados: Orientación respecto al sur geográfico.
+        
+    Returns:
+        Diccionario con producción anual total (kWh/año), producción mensual detallada y pérdidas estimadas del sistema.
     """
     return calcular_produccion_solar_pvgis(latitud, longitud, potencia_pico_kw, inclinacion_grados, azimut_grados)
 
-@mcp.tool()
+
+DESC_MEJORAS_RD390 = """Genera automáticamente los 3 paquetes de medidas de mejora exigidos por el Real Decreto 390/2021 (Mejora de Envolvente SATE, Sustitución por Aerotermia y Solución Integral con Solar FV), calculando reducción de emisiones, ahorro en factura (€/año) y periodo de amortización (payback).
+
+Cuándo usar:
+    Invoque esta herramienta preceptivamente en todo certificado energético de edificio existente para cumplimentar el Anexo III de Medidas de Mejora. Para auditar subvenciones NextGen use 'emitir_dictamen_subvenciones_nextgen'.
+
+Comportamiento y efectos secundarios:
+    Operación de cálculo analítico y financiero (Read-Only). No modifica archivos en disco. Emite progreso interactivo a FastMCP."""
+
+@mcp.tool(description=DESC_MEJORAS_RD390, annotations={"read_only_hint": True, "idempotent_hint": True})
 def proponer_medidas_mejora_rd390(
-    superficie_util: float,
-    ano_construccion: int,
-    zona_climatica: str = "C1",
-    tipo_calefaccion: str = "EfectoJoule",
-    tipo_acs: str = "EfectoJoule",
+    superficie_util: Annotated[float, Field(description="Superficie útil del inmueble en m².", gt=0.0)],
+    ano_construccion: Annotated[int, Field(description="Año de construcción catastral del edificio.", ge=1800, le=2050)],
+    zona_climatica: Annotated[str, Field(description="Zona climática CTE DB-HE asignada.")] = "C1",
+    tipo_calefaccion: Annotated[str, Field(description="Sistema de calefacción actual del edificio.")] = "EfectoJoule",
+    tipo_acs: Annotated[str, Field(description="Sistema de ACS actual del edificio.")] = "EfectoJoule",
     ctx: Optional[Context] = None
 ) -> Dict[str, Any]:
-    """
-    Genera automáticamente los 3 paquetes de medidas de mejora exigidos por el Real Decreto 390/2021
-    (Envolvente SATE + Carpinterías, Aerotermia y Solución Integral con Fotovoltaica),
-    calculando la inversión estimada (€), el ahorro en factura (€/año), la nueva letra energética y el retorno (payback).
+    """Generación oficial de paquetes de medidas de mejora según Real Decreto 390/2021.
+    
+    Args:
+        superficie_util: Superficie útil habitable en m².
+        ano_construccion: Año de construcción original.
+        zona_climatica: Código de zona climática CTE.
+        tipo_calefaccion: Tipo de calefacción actual.
+        tipo_acs: Tipo de ACS actual.
+        ctx: Contexto FastMCP para telemetría.
+        
+    Returns:
+        Diccionario con los 3 paquetes reglamentarios de mejora, inversión estimada (€), ahorro (€/año), reducción porcentual y nuevo salto de letra.
     """
     reportar_progreso_seguro(ctx, 35, 100, "Calculando demanda y balance térmico oficial...")
     calc = calcular_calificacion_energetica(
@@ -287,26 +450,43 @@ def proponer_medidas_mejora_rd390(
         letra_acs=calc["calificacion_global_emisiones"]
     )
     proyecto = ProyectoCertificacion(administrativos=adm, generales=gen)
+    reportar_progreso_seguro(ctx, 70, 100, "Calculando paquetes reglamentarios RD 390/2021 (SATE, Aerotermia, Integral)...")
     medidas = calcular_paquetes_medidas_mejora(proyecto, res)
+    reportar_progreso_seguro(ctx, 100, 100, "Paquetes de medidas de mejora calculados.")
     return {
         "calificacion_actual": calc,
         "medidas_de_mejora": [m.model_dump() for m in medidas]
     }
 
-@mcp.tool()
+DESC_NEXTGEN = """Genera el informe técnico justificativo y dictamen oficial de cumplimiento para las subvenciones Next Generation EU (RD 853/2021) y deducciones fiscales en IRPF (40%/60%).
+
+Cuándo usar:
+    Utilice esta herramienta para justificar el cumplimiento del requisito normativo de reducción del 30% en consumo de energía primaria no renovable para tramitar ayudas públicas.
+
+Comportamiento y efectos secundarios:
+    Operación analítica de evaluación económica y normativa (Read-Only). No altera archivos."""
+
+@mcp.tool(description=DESC_NEXTGEN, annotations={"read_only_hint": True, "idempotent_hint": True})
 def emitir_dictamen_subvenciones_nextgen(
-    superficie_util: float,
-    ano_construccion: int,
-    zona_climatica: str = "C1",
-    tipo_calefaccion: str = "EfectoJoule",
-    tipo_acs: str = "EfectoJoule",
-    paquete_mejora: int = 3
+    superficie_util: Annotated[float, Field(description="Superficie útil habitable en m².", gt=0.0)],
+    ano_construccion: Annotated[int, Field(description="Año de construcción del inmueble.", ge=1800, le=2050)],
+    zona_climatica: Annotated[str, Field(description="Zona climática CTE DB-HE.")] = "C1",
+    tipo_calefaccion: Annotated[str, Field(description="Sistema de calefacción actual.")] = "EfectoJoule",
+    tipo_acs: Annotated[str, Field(description="Sistema de ACS actual.")] = "EfectoJoule",
+    paquete_mejora: Annotated[Union[int, str], Field(description="Paquete de mejora a evaluar: 1 (Envolvente SATE), 2 (Aerotermia) o 3 (Integral con Solar FV).")] = 3
 ) -> Dict[str, Any]:
-    """
-    Genera el informe técnico justificativo y dictamen oficial de cumplimiento para las
-    ayudas Next Generation EU (Real Decreto 853/2021) y deducciones del IRPF (D.A. 50ª Ley IRPF),
-    acreditando si se supera el umbral del 30% de reducción en energía primaria no renovable.
-    - paquete_mejora: 1 (Envolvente), 2 (Aerotermia) o 3 (Integral con Solar FV).
+    """Dictamen técnico oficial de justificación de subvenciones Next Generation EU (RD 853/2021).
+    
+    Args:
+        superficie_util: Superficie útil del inmueble en m².
+        ano_construccion: Año de construcción.
+        zona_climatica: Zona climática CTE.
+        tipo_calefaccion: Sistema de calefacción actual.
+        tipo_acs: Sistema de ACS actual.
+        paquete_mejora: Paquete de mejora a evaluar (1, 2 o 3).
+        
+    Returns:
+        Diccionario con porcentaje de ahorro de energía primaria no renovable, tramo de ayuda concedible (40%, 65%, 80%), deducción de IRPF y texto de dictamen oficial.
     """
     calc = calcular_calificacion_energetica(
         superficie_util=superficie_util,
@@ -342,32 +522,67 @@ def emitir_dictamen_subvenciones_nextgen(
     proyecto = ProyectoCertificacion(administrativos=adm, generales=gen)
     medidas = calcular_paquetes_medidas_mejora(proyecto, res)
     
-    idx = max(0, min(paquete_mejora - 1, len(medidas) - 1))
+    if isinstance(paquete_mejora, int):
+        idx = max(0, min(paquete_mejora - 1, len(medidas) - 1))
+    else:
+        pm_str = str(paquete_mejora).strip().upper()
+        if "SATE" in pm_str and "AERO" in pm_str:
+            idx = 2
+        elif "AERO" in pm_str:
+            idx = 1
+        elif "SATE" in pm_str or "ENV" in pm_str:
+            idx = 0
+        else:
+            try:
+                idx = max(0, min(int(pm_str) - 1, len(medidas) - 1))
+            except ValueError:
+                idx = 2
     medida_sel = medidas[idx]
-    
     return generar_informe_justificativo_nextgen(proyecto, res, medida_sel)
 
-@mcp.tool()
+DESC_CERTIFICADO_COMPLETO = """Genera el conjunto completo de entregables oficiales para el certificado energético: archivo de proyecto .cex para CE3X v3.2, archivo XML oficial v3.0 validado con xmlcheck.exe y PDF oficial de 15 páginas compilado con Typst / xml2cert.exe.
+
+Cuándo usar:
+    Invoque esta herramienta como fase final de la certificación tras haber validado todos los datos de envolvente, clima e instalaciones para producir los documentos oficiales exigidos por la Administración.
+
+Comportamiento y efectos secundarios:
+    Operación de generación de archivos en disco (Write). Escribe los archivos .cex, .xml y .pdf en el directorio de salida especificado. Emite progreso interactivo a FastMCP."""
+
+@mcp.tool(description=DESC_CERTIFICADO_COMPLETO, annotations={"read_only_hint": False, "destructive_hint": False})
 def generar_certificado_completo(
-    nombre_edificio: str,
-    direccion: str,
-    municipio: str,
-    provincia: str,
-    codigo_postal: str,
-    superficie_util: float,
-    ano_construccion: int,
-    tipo_calefaccion: Optional[str] = None,
-    tipo_acs: Optional[str] = None,
-    referencia_catastral: Optional[str] = None,
-    directorio_salida: Optional[str] = None,
-    tipologia: str = "Bloque",
+    nombre_edificio: Annotated[str, Field(description="Nombre identificativo del edificio o vivienda (ej. 'Vivienda Unifamiliar Caamaño').")],
+    direccion: Annotated[str, Field(description="Dirección completa del inmueble (calle, número, piso).")],
+    municipio: Annotated[str, Field(description="Nombre oficial del municipio.")],
+    provincia: Annotated[str, Field(description="Nombre oficial de la provincia española.")],
+    codigo_postal: Annotated[str, Field(description="Código postal oficial de 5 dígitos (ej. '15001', '28001').")],
+    superficie_util: Annotated[float, Field(description="Superficie útil habitable del inmueble en metros cuadrados (m²).", gt=0.0)],
+    ano_construccion: Annotated[int, Field(description="Año de construcción del edificio según Catastro o proyecto.", ge=1800, le=2050)],
+    tipo_calefaccion: Annotated[Optional[str], Field(description="Sistema térmico de calefacción instalado.")] = None,
+    tipo_acs: Annotated[Optional[str], Field(description="Sistema de agua caliente sanitaria instalado.")] = None,
+    referencia_catastral: Annotated[Optional[str], Field(description="Referencia Catastral oficial del inmueble.")] = None,
+    directorio_salida: Annotated[Optional[str], Field(description="Ruta al directorio donde se guardarán los archivos generados. Si es None, usa carpeta temporal.")] = None,
+    tipologia: Annotated[str, Field(description="Tipología del edificio: 'Bloque', 'Unifamiliar' o 'Terciario'.")] = "Bloque",
     ctx: Optional[Context] = None
 ) -> Dict[str, Any]:
-    """
-    Genera el conjunto completo de entregables oficiales para el certificado energético:
-    1. Archivo XML oficial (DatosEnergeticosDelEdificio v3.0) 100% validado contra RelaxNG y limpio de datos fantasma.
-    2. Archivo PDF oficial de 15 páginas compilado con Typst / xml2cert sin torres ni equipos ficticios.
-    3. Archivo de proyecto editable .cex nativo adaptado a la provincia, zona climática, año y superficie reales.
+    """Generación integral de entregables oficiales (.cex, .xml v3.0, .pdf).
+    
+    Args:
+        nombre_edificio: Nombre del proyecto o edificio.
+        direccion: Dirección completa del inmueble.
+        municipio: Municipio oficial.
+        provincia: Provincia oficial.
+        codigo_postal: Código postal de 5 dígitos.
+        superficie_util: Superficie útil habitable en m².
+        ano_construccion: Año de edificación.
+        tipo_calefaccion: Vector energético de calefacción.
+        tipo_acs: Vector energético de ACS.
+        referencia_catastral: Referencia Catastral oficial.
+        directorio_salida: Directorio destino para los archivos.
+        tipologia: 'Bloque', 'Unifamiliar' o 'Terciario'.
+        ctx: Contexto FastMCP para telemetría.
+        
+    Returns:
+        Diccionario con rutas absolutas a los archivos .cex, .xml y .pdf generados, calificación obtenida y estado de validación RelaxNG.
     """
     out_dir = directorio_salida or os.path.join(tempfile.gettempdir(), "ce3x_certificados")
     os.makedirs(out_dir, exist_ok=True)
@@ -531,333 +746,453 @@ def generar_certificado_completo(
         }
     }
 
+DESC_ORGANIZAR_CARPETA = """Crea la estructura estándar de 5 carpetas canónicas (01_FOTOS, 02_PLANOS, 03_DOCUMENTACION, 04_NOTAS_CAMPO, 05_ENTREGABLES) y clasifica automáticamente los archivos existentes según su extensión y metadatos.
 
-@mcp.tool()
-def organizar_carpeta_visita(ruta_carpeta: str) -> Dict[str, Any]:
-    """
-    Crea la estructura estándar de 5 carpetas y clasifica automáticamente los archivos:
-    - INFORMACION/   -> Notas de visita, Referencia Catastral, apuntes y datos.
-    - PLANOS/        -> Planos de distribución en PDF, croquis acotados, modelos BIM (IFC/DWG).
-    - FOTOS/         -> Fotografías del inmueble (fachada exterior, huecos y carpinterías).
-    - INSTALACIONES/ -> Fotos de placas de calderas, termos, bombas de calor y fichas técnicas.
-    - CERTIFICADO/   -> Carpeta oficial de salida para .cex, .xml, .pdf y mejoras NextGen.
+Cuándo usar:
+    Utilice esta herramienta al inicio del flujo de trabajo documental tras descargar los archivos tomados en la visita para ordenar la información. Antes de certificar, ejecute 'auditar_carpeta_visita'.
 
-    Si la carpeta del inmueble contiene archivos sueltos en su raíz o en carpetas no estándar,
-    los clasifica y mueve automáticamente a su subcarpeta correspondiente, generando además
-    la ficha 'LEEME_ESTRUCTURA_VISITA.txt'.
+Comportamiento y efectos secundarios:
+    Operación de gestión del sistema de archivos (Write / Organize). Mueve y organiza archivos dentro de la carpeta indicada sin eliminar contenidos."""
+
+@mcp.tool(description=DESC_ORGANIZAR_CARPETA, annotations={"read_only_hint": False, "destructive_hint": False})
+def organizar_carpeta_visita(
+    ruta_carpeta: Annotated[str, Field(description="Ruta absoluta o relativa a la carpeta raíz de la visita técnica.")]
+) -> Dict[str, Any]:
+    """Crea la estructura estándar de 5 carpetas y clasifica archivos de visita.
+    
+    Args:
+        ruta_carpeta: Directorio del inmueble a estructurar.
+        
+    Returns:
+        Diccionario con carpetas creadas, archivos movidos por categoría y resumen de organización.
     """
     return organizar_carpeta_visita_impl(ruta_carpeta)
 
-@mcp.tool()
-def auditar_carpeta_visita(ruta_carpeta: str, ctx: Optional[Context] = None) -> Dict[str, Any]:
+
+DESC_AUDITAR_CARPETA = """Audita de forma autónoma una carpeta de visita técnica (croquis, notas, planos PDF, fotos y fichas) verificando si se dispone de toda la información preceptiva para certificar y emite un informe de salud documental.
+
+Cuándo usar:
+    Invoque esta herramienta antes de ejecutar 'certificar_desde_carpeta_visita' para detectar omisiones preceptivas (como fotos de instalaciones, planos o referencia catastral).
+
+Comportamiento y efectos secundarios:
+    Operación de inspección y análisis documental (Read-Only). No modifica los archivos existentes. Emite progreso interactivo a FastMCP."""
+
+@mcp.tool(description=DESC_AUDITAR_CARPETA, annotations={"read_only_hint": True, "idempotent_hint": True})
+def auditar_carpeta_visita(
+    ruta_carpeta: Annotated[str, Field(description="Ruta a la carpeta de visita técnica a auditar.")],
+    ctx: Optional[Context] = None
+) -> Dict[str, Any]:
+    """Auditoría de integridad documental para carpetas de visita técnica.
+    
+    Args:
+        ruta_carpeta: Ruta a la carpeta que contiene la documentación de visita.
+        ctx: Contexto FastMCP para telemetría.
+        
+    Returns:
+        Diccionario con índice de completitud (0-100%), datos identificados, elementos faltantes y recomendación técnica.
     """
-    Audita de forma autónoma una carpeta de visita técnica (croquis, notas, planos PDF,
-    imágenes, modelos BIM), extrae datos catastrales y arquitectónicos, deduce la envolvente
-    según normativa histórica y genera las preguntas quirúrgicas para el técnico antes de certificar.
-    Define automáticamente la subcarpeta 'CERTIFICADO/' para la entrega final.
-    """
-    reportar_progreso_seguro(ctx, 20, 100, f"Explorando documentos en {os.path.basename(ruta_carpeta)}...")
+    reportar_progreso_seguro(ctx, 30, 100, f"Inspeccionando contenidos de {os.path.basename(ruta_carpeta)}...")
     res = auditar_carpeta_inmueble(ruta_carpeta)
     reportar_progreso_seguro(ctx, 100, 100, "Auditoría de carpeta completada.")
     return res
 
-@mcp.tool()
+
+DESC_CERTIFICAR_CARPETA = """Certifica de forma automática el inmueble a partir de la carpeta de visita procesando planos PDF, Catastro y notas de campo para generar los archivos oficiales (.cex, .xml y .pdf) dentro de la carpeta 05_ENTREGABLES.
+
+Cuándo usar:
+    Utilice esta herramienta cuando disponga de una carpeta de visita organizada para ejecutar el flujo integral end-to-end de certificación en un solo paso.
+
+Comportamiento y efectos secundarios:
+    Operación integral con escritura en disco (Write). Crea la subcarpeta 'CERTIFICADO' dentro de '05_ENTREGABLES' con los documentos oficiales. Emite progreso interactivo a FastMCP."""
+
+@mcp.tool(description=DESC_CERTIFICAR_CARPETA, annotations={"read_only_hint": False, "destructive_hint": False})
 def certificar_desde_carpeta_visita(
-    ruta_carpeta: str,
-    orientacion_principal: str = "Sur",
-    tipo_calefaccion: Optional[str] = None,
-    tipo_acs: Optional[str] = None,
-    nombre_edificio: Optional[str] = None,
+    ruta_carpeta: Annotated[str, Field(description="Ruta a la carpeta que contiene los archivos de la visita técnica.")],
+    orientacion_principal: Annotated[str, Field(description="Orientación predominante de la fachada principal: 'Sur', 'Norte', 'Este', 'Oeste', etc.")] = "Sur",
+    tipo_calefaccion: Annotated[Optional[str], Field(description="Vector de calefacción: 'EfectoJoule', 'GasNatural', 'Gasoleo', 'BombaCalor', etc.")] = None,
+    tipo_acs: Annotated[Optional[str], Field(description="Vector de ACS: 'EfectoJoule', 'GasNatural', 'Gasoleo', 'BombaCalor', etc.")] = None,
+    nombre_edificio: Annotated[Optional[str], Field(description="Nombre o denominación del edificio.")] = None,
     ctx: Optional[Context] = None
 ) -> Dict[str, Any]:
-    """
-    Certifica de forma automática el inmueble a partir de la carpeta de visita.
-    Crea la subcarpeta 'CERTIFICADO/' dentro de la carpeta del inmueble y genera directamente:
-    1. Proyecto nativo editable para CE3X (.cex).
-    2. Archivo XML oficial v3.0 para registro telemático (.xml).
-    3. Informe oficial de 15 páginas compilado con Typst (.pdf).
-    4. Informe de Medidas de Mejora RD 390/2021 y Dictamen NextGen (.md / .pdf).
-    """
-    def cb(prog: float, tot: float, msg: str) -> None:
-        reportar_progreso_seguro(ctx, prog, tot, msg)
+    """Certificación automatizada integral desde carpeta de visita técnica.
+    
+    Args:
+        ruta_carpeta: Ruta a la carpeta de visita técnica.
+        orientacion_principal: Orientación solar de la fachada principal.
+        tipo_calefaccion: Sistema de calefacción comprobado.
+        tipo_acs: Sistema de ACS comprobado.
+        nombre_edificio: Denominación del inmueble.
+        ctx: Contexto FastMCP para telemetría.
         
-    reportar_progreso_seguro(ctx, 5, 100, f"Iniciando certificación de {os.path.basename(ruta_carpeta)}...")
-    return certificar_inmueble_desde_carpeta(
+    Returns:
+        Diccionario con informe de extracción documental y rutas a los archivos .cex, .xml y .pdf oficiales generados.
+    """
+    reportar_progreso_seguro(ctx, 20, 100, "Extrayendo datos de planos, Catastro y notas de campo...")
+    res = certificar_inmueble_desde_carpeta(
         ruta_carpeta=ruta_carpeta,
         orientacion_principal=orientacion_principal,
         tipo_calefaccion=tipo_calefaccion,
         tipo_acs=tipo_acs,
-        nombre_edificio=nombre_edificio,
-        progress_callback=cb
+        nombre_edificio=nombre_edificio
     )
+    reportar_progreso_seguro(ctx, 100, 100, "Certificación desde carpeta completada.")
+    return res
 
-@mcp.tool()
+
+DESC_VISITA_PRESENCIAL = """Registra formalmente la visita presencial obligatoria exigida por el Art. 8 del RD 390/2021, generando el documento justificativo del Anexo IV preceptivo para el registro administrativo autonómico.
+
+Cuándo usar:
+    Invoque esta herramienta de forma preceptiva para todo certificado de edificio existente para acreditar la visita presencial del técnico competente.
+
+Comportamiento y efectos secundarios:
+    Operación de registro y generación documental (Write). Crea el acta de visita presencial en disco."""
+
+@mcp.tool(description=DESC_VISITA_PRESENCIAL, annotations={"read_only_hint": False, "destructive_hint": False})
 def registrar_visita_presencial(
-    fecha_visita: str,
-    pruebas_realizadas: Optional[List[str]] = None,
-    observaciones_tecnicas: Optional[str] = None
+    fecha_visita: Annotated[str, Field(description="Fecha de la visita presencial en formato YYYY-MM-DD (ej. '2026-10-17').")],
+    pruebas_realizadas: Annotated[str, Field(description="Descripción de las pruebas y comprobaciones in situ realizadas (ej. 'Inspección visual de cerramientos, medición láser, toma de datos de caldera').")],
+    observaciones_tecnicas: Annotated[str, Field(description="Observaciones técnicas adicionales recogidas durante la inspección.")] = ""
 ) -> Dict[str, Any]:
+    """Registro oficial de visita presencial conforme al Real Decreto 390/2021.
+    
+    Args:
+        fecha_visita: Fecha en formato estándar ISO YYYY-MM-DD.
+        pruebas_realizadas: Detalle de las comprobaciones realizadas in situ.
+        observaciones_tecnicas: Notas técnicas complementarias.
+        
+    Returns:
+        Diccionario con los datos del registro oficial de visita presencial y confirmación reglamentaria.
     """
-    Registra formalmente la visita presencial obligatoria exigida por el Art. 8 del RD 390/2021
-    y genera el bloque documental oficial para el Anexo IV del Certificado de Eficiencia Energética.
-    Pruebas disponibles: inspeccion_visual, medicion_laser, comprobacion_placas, termografia,
-    ensayo_blower_door, facturas_electricas.
-    """
-    return registrar_visita_e_inspeccion(
-        fecha_visita=fecha_visita,
-        pruebas_realizadas=pruebas_realizadas,
-        observaciones_tecnicas=observaciones_tecnicas
-    )
+    return registrar_visita_e_inspeccion(fecha_visita, pruebas_realizadas, observaciones_tecnicas)
 
-@mcp.tool()
+
+DESC_BLOWER_DOOR = """Procesa un ensayo de estanqueidad al aire según norma UNE-EN ISO 9972 (Blower Door), calculando la tasa de renovación n50 (renovaciones/hora), la permeabilidad q50 (m³/h·m²) y la tasa de infiltración de aire para CE3X.
+
+Cuándo usar:
+    Utilice esta herramienta cuando se haya ejecutado un ensayo de presurización/despresurización Blower Door para sustituir la tasa de infiltración estimada por defecto de CE3X por el valor real medido.
+
+Comportamiento y efectos secundarios:
+    Operación de cálculo analítico normativo (Read-Only). No altera archivos ni estado persistente."""
+
+@mcp.tool(description=DESC_BLOWER_DOOR, annotations={"read_only_hint": True, "idempotent_hint": True})
 def registrar_ensayo_estanqueidad_blower_door(
-    volumen_neto_m3: float,
-    superficie_envolvente_m2: float,
-    caudal_50pa_m3h: float
+    volumen_neto_m3: Annotated[float, Field(description="Volumen interno neto del espacio calefactado en metros cúbicos (m³).", gt=0.0)],
+    superficie_envolvente_m2: Annotated[float, Field(description="Superficie total de la envolvente térmica interior en metros cuadrados (m²).", gt=0.0)],
+    caudal_50pa_m3h: Annotated[float, Field(description="Caudal de fuga de aire medido a 50 Pa de presión en metros cúbicos por hora (m³/h).", gt=0.0)]
 ) -> Dict[str, Any]:
+    """Procesamiento y cálculo normativo de ensayo Blower Door (ISO 9972).
+    
+    Args:
+        volumen_neto_m3: Volumen interior climatizado en m³.
+        superficie_envolvente_m2: Área de envolvente en contacto con el aire en m².
+        caudal_50pa_m3h: Fuga de aire a 50 Pa en m³/h.
+        
+    Returns:
+        Diccionario con n50 (renovaciones/hora), q50 (m³/h·m²), tasa de infiltración CE3X y diagnóstico de hermeticidad Passivhaus / CTE.
     """
-    Procesa un ensayo de estanqueidad al aire según norma UNE-EN ISO 9972 (Blower Door).
-    Calcula el valor n50 (ren/h a 50 Pa), q50 (m3/h·m2), la tasa de infiltración equivalente
-    para el motor CE3X y emite el diagnóstico de hermeticidad (Passivhaus / CTE DB-HE 2019).
-    """
-    return registrar_ensayo_blower_door(
-        volumen_neto_m3=volumen_neto_m3,
-        superficie_envolvente_m2=superficie_envolvente_m2,
-        caudal_50pa_m3h=caudal_50pa_m3h
-    )
+    return registrar_ensayo_blower_door(volumen_neto_m3, superficie_envolvente_m2, caudal_50pa_m3h)
 
-@mcp.tool()
+
+DESC_PUENTES_TERMICOS = """Calcula las transmitancias térmicas lineales (psi en W/m·K) y la pérdida térmica global por puentes térmicos integrados según el Documento de Apoyo DA DB-HE / 3 del Código Técnico de la Edificación.
+
+Cuándo usar:
+    Invoque esta herramienta para cuantificar el impacto térmico de frentes de forjado, contornos de hueco y pilares en fachada en lugar de usar valores globales estimados.
+
+Comportamiento y efectos secundarios:
+    Operación analítica de solo lectura (Read-Only). Sin efectos secundarios en disco."""
+
+@mcp.tool(description=DESC_PUENTES_TERMICOS, annotations={"read_only_hint": True, "idempotent_hint": True})
 def calcular_puentes_termicos(
-    ano_construccion: int,
-    perimetro_forjado_m: float,
-    perimetro_huecos_m: float,
-    longitud_pilares_m: float = 0.0
+    ano_construccion: Annotated[int, Field(description="Año de construcción del edificio para asignar la transmitancia lineal de referencia según normativa histórica aplicable.", ge=1800, le=2050)],
+    perimetro_forjado_m: Annotated[float, Field(description="Longitud total de frentes de forjado en fachada en metros (m).", ge=0.0)] = 0.0,
+    perimetro_huecos_m: Annotated[float, Field(description="Perímetro total de contornos de huecos y ventanas en metros (m).", ge=0.0)] = 0.0,
+    longitud_pilares_m: Annotated[float, Field(description="Longitud total de pilares integrados en fachada exterior en metros (m).", ge=0.0)] = 0.0
 ) -> Dict[str, Any]:
+    """Cálculo normativo de puentes térmicos lineales integrados según CTE DA DB-HE/3.
+    
+    Args:
+        ano_construccion: Año de construcción para determinar la solución constructiva.
+        perimetro_forjado_m: Metros lineales de frente de forjado.
+        perimetro_huecos_m: Metros lineales de contorno de ventanas.
+        longitud_pilares_m: Metros lineales de pilares en fachada.
+        
+    Returns:
+        Diccionario con transmitancias lineales individuales (W/m·K), pérdidas térmicas parciales y pérdida total transmitida (W/K).
     """
-    Calcula las transmitancias térmicas lineales (psi en W/m·K) y la pérdida térmica global (W/K)
-    asociada a puentes térmicos en frentes de forjado, jambas, dinteles, alféizares y pilares
-    según el catálogo oficial del Documento de Apoyo CTE (DA DB-HE / 3).
-    """
-    return calcular_puentes_termicos_cte(
-        ano_construccion=ano_construccion,
-        perimetro_forjado_m=perimetro_forjado_m,
-        perimetro_huecos_m=perimetro_huecos_m,
-        longitud_pilares_m=longitud_pilares_m
-    )
+    return calcular_puentes_termicos_cte(ano_construccion, perimetro_forjado_m, perimetro_huecos_m, longitud_pilares_m)
 
-@mcp.tool()
+
+DESC_PERFIL_TECNICO = """Configura y guarda de forma persistente los datos colegiales y profesionales del técnico certificador (nombre, NIF, titulación, colegio, número de colegiado) para auto-cumplimentar todos los certificados generados.
+
+Cuándo usar:
+    Invoque esta herramienta una sola vez o cuando cambien los datos profesionales del técnico para que se inyecten automáticamente en los archivos .cex, .xml y .pdf.
+
+Comportamiento y efectos secundarios:
+    Operación de configuración persistente (Write). Guarda los datos en el archivo de perfil local del usuario."""
+
+@mcp.tool(description=DESC_PERFIL_TECNICO, annotations={"read_only_hint": False, "destructive_hint": False})
 def configurar_perfil_tecnico_colegiado(
-    nombre_tecnico: str,
-    nif_tecnico: str,
-    titulacion: str = "Arquitecto Técnico",
-    colegio_profesional: Optional[str] = None,
-    numero_colegiado: Optional[str] = None,
-    razon_social: Optional[str] = None,
-    domicilio: Optional[str] = None,
-    municipio: Optional[str] = None,
-    provincia: Optional[str] = None,
-    codigo_postal: Optional[str] = None,
-    telefono: Optional[str] = None,
-    email: Optional[str] = None,
-    comunidad_autonoma: str = "Galicia"
+    nombre_tecnico: Annotated[str, Field(description="Nombre y apellidos completos del técnico certificador competente.")],
+    nif_tecnico: Annotated[str, Field(description="NIF o NIE del técnico certificador.")],
+    titulacion: Annotated[str, Field(description="Titulación académica habilitante (ej. 'Arquitecto Técnico', 'Ingeniero de Edificación', 'Arquitecto').")],
+    colegio_profesional: Annotated[str, Field(description="Nombre oficial del Colegio Profesional (ej. 'Colegio Oficial de la Arquitectura Técnica de A Coruña').")],
+    numero_colegiado: Annotated[str, Field(description="Número de colegiado profesional.")],
+    razon_social: Annotated[str, Field(description="Razón social del estudio o empresa técnica (opcional).")] = "",
+    domicilio: Annotated[str, Field(description="Domicilio o dirección profesional del técnico.")] = "",
+    municipio: Annotated[str, Field(description="Municipio del domicilio profesional.")] = "",
+    provincia: Annotated[str, Field(description="Provincia del domicilio profesional.")] = "",
+    codigo_postal: Annotated[str, Field(description="Código postal profesional de 5 dígitos.")] = "",
+    telefono: Annotated[str, Field(description="Teléfono de contacto profesional.")] = "",
+    email: Annotated[str, Field(description="Correo electrónico profesional de contacto.")] = "",
+    comunidad_autonoma: Annotated[str, Field(description="Comunidad Autónoma donde ejerce habitualmente la actividad.")] = "Galicia"
 ) -> Dict[str, Any]:
+    """Configuración y persistencia del perfil profesional del técnico competente.
+    
+    Args:
+        nombre_tecnico: Nombre completo del profesional.
+        nif_tecnico: NIF/NIE del profesional.
+        titulacion: Titulación técnica colegiada.
+        colegio_profesional: Colegio profesional oficial.
+        numero_colegiado: Número de colegiación.
+        razon_social: Empresa o sociedad profesional.
+        domicilio: Dirección profesional.
+        municipio: Municipio profesional.
+        provincia: Provincia profesional.
+        codigo_postal: Código postal profesional.
+        telefono: Teléfono de contacto.
+        email: Email de contacto.
+        comunidad_autonoma: Comunidad autónoma.
+        
+    Returns:
+        Diccionario con el perfil persistido y confirmación de guardado.
     """
-    Configura y guarda de forma persistente los datos colegiales y profesionales del técnico certificador.
-    Se inyectarán automáticamente en todos los proyectos .cex, archivos XML oficiales v3.0
-    y documentos PDF generados cumpliendo estrictamente con el RD 390/2021.
-    """
-    return guardar_perfil_tecnico(
-        nombre_tecnico=nombre_tecnico,
-        nif_tecnico=nif_tecnico,
-        titulacion=titulacion,
-        colegio_profesional=colegio_profesional,
-        numero_colegiado=numero_colegiado,
-        razon_social=razon_social,
-        domicilio=domicilio,
-        municipio=municipio,
-        provincia=provincia,
-        codigo_postal=codigo_postal,
-        telefono=telefono,
-        email=email,
-        comunidad_autonoma=comunidad_autonoma
-    )
-
-@mcp.tool()
-def calcular_sombras_hueco(
-    orientacion: str = "Sur",
-    ancho_hueco_m: float = 1.20,
-    alto_hueco_m: float = 1.20,
-    retranqueo_m: float = 0.0,
-    vuelo_voladizo_m: float = 0.0,
-    tiene_toldo: bool = False
-) -> Dict[str, Any]:
-    """
-    Calcula los factores de sombra estacionales (verano e invierno) y el factor solar modificado
-    de un hueco por voladizo, retranqueo o toldo, conforme al CTE DB-HE y CE3X.
-    """
-    return calcular_sombras_estacionales_hueco(
-        orientacion=orientacion,
-        ancho_hueco_m=ancho_hueco_m,
-        alto_hueco_m=alto_hueco_m,
-        retranqueo_m=retranqueo_m,
-        vuelo_voladizo_m=vuelo_voladizo_m,
-        tiene_toldo=tiene_toldo
-    )
-
-@mcp.tool()
-def contrastar_consumo_facturas_reales(
-    consumo_teorico_kwh_ano: float,
-    electricidad_real_kwh: float,
-    gas_natural_real_kwh: float = 0.0,
-    gasoleo_real_litros: float = 0.0
-) -> Dict[str, Any]:
-    """
-    Compara el consumo real de energía de los últimos 12 meses (electricidad, gas natural o gasóleo)
-    frente a la demanda teórica calculada en el modelo de CE3X, detectando desviaciones de uso
-    y hábitos de confort del usuario.
-    """
-    return contrastar_facturas_reales(
-        consumo_teorico_kwh_ano=consumo_teorico_kwh_ano,
-        electricidad_real_kwh=electricidad_real_kwh,
-        gas_natural_real_kwh=gas_natural_real_kwh,
-        gasoleo_real_litros=gasoleo_real_litros
-    )
-
-@mcp.resource("ce3x://librerias/catalogo_soluciones_constructivas")
-def obtener_catalogo_soluciones_constructivas() -> str:
-    """Catálogo oficial de arquetipos constructivos de muros, vidrios y carpinterías según IDAE y CE3X."""
-    import json
-    catalogo = {
-        "muros_fachada": CATALOGO_MUROS_FACHADA,
-        "vidrios": CATALOGO_VIDRIOS,
-        "marcos_carpinteria": CATALOGO_MARCOS_CARPINTERIA
+    perfil = {
+        "nombre_tecnico": nombre_tecnico,
+        "nif_tecnico": nif_tecnico,
+        "titulacion": titulacion,
+        "colegio_profesional": colegio_profesional,
+        "numero_colegiado": numero_colegiado,
+        "razon_social": razon_social,
+        "domicilio": domicilio,
+        "municipio": municipio,
+        "provincia": provincia,
+        "codigo_postal": codigo_postal,
+        "telefono": telefono,
+        "email": email,
+        "comunidad_autonoma": comunidad_autonoma
     }
-    return json.dumps(catalogo, indent=2, ensure_ascii=False)
-
-@mcp.prompt()
-def iniciar_asistente_visita() -> str:
-    """Prompt inicial de bienvenida para solicitar la carpeta de visita y organizar los archivos."""
-    return r"""Actúa como un Arquitecto Técnico experto en certificación energética con CE3X.
-Al iniciar la interacción con el usuario:
-1. Pregúntale amablemente: '¿En qué carpeta de tu ordenador tienes los archivos o toma de datos de la visita del inmueble? (Por favor, facilítame la ruta completa, por ejemplo: C:\MisVisitas\Piso_RuaReal)'.
-2. Indícale que si tiene los archivos sueltos (fotos, planos, notas), los organizarás automáticamente en las 5 carpetas estándar:
-   - INFORMACION/ (apuntes, notas, datos del cliente)
-   - PLANOS/ (planos en PDF, croquis acotados, modelos IFC/DWG)
-   - FOTOS/ (fotos generales del inmueble, fachadas y huecos)
-   - INSTALACIONES/ (fotos de placas de calderas, termos, bombas de calor y fichas técnicas)
-   - CERTIFICADO/ (entregables oficiales finales: .cex, .xml, .pdf del informe y mejoras NextGen)
-3. En cuanto el usuario te proporcione la ruta, ejecuta 'organizar_carpeta_visita' y luego 'auditar_carpeta_visita'."""
-
-@mcp.prompt()
-def asistente_auditoria_carpeta_visita(ruta_carpeta: str = "ruta/a/carpeta_inmueble") -> str:
-    """Asistente para auditar una carpeta de visita y realizar la entrevista interactiva al técnico."""
-    return (
-        f"Por favor, analiza la carpeta de visita '{ruta_carpeta}'. "
-        "Ejecuta la herramienta 'auditar_carpeta_visita' para identificar qué documentos "
-        "y datos catastrales o de planos están presentes. Presenta un resumen conciso "
-        "y hazme únicamente las preguntas sobre los datos críticos que falten (sombras, color de marcos, instalaciones) "
-        "antes de generar el certificado completo."
-    )
+    return guardar_perfil_tecnico(perfil)
 
 
+DESC_SOMBRAS_HUECO = """Calcula los factores reductores de sombra estacionales (verano e invierno) y el factor solar modificado Fs para huecos acristalados debidos a elementos de sombra propios (voladizos, retranqueos y aleros) según CTE DB-HE.
 
-@mcp.tool()
+Cuándo usar:
+    Utilice esta herramienta para calcular la protección solar propia de las ventanas del edificio. Para obstáculos remotos frente al edificio (edificios de enfrente, árboles lejanos), use 'calcular_sombras_obstaculo_edificio_enfrente'.
+
+Comportamiento y efectos secundarios:
+    Operación analítica de solo lectura (Read-Only). No modifica archivos ni registros locales."""
+
+@mcp.tool(description=DESC_SOMBRAS_HUECO, annotations={"read_only_hint": True, "idempotent_hint": True})
+def calcular_sombras_hueco(
+    orientacion: Annotated[str, Field(description="Orientación del hueco: 'Sur', 'Norte', 'Este', 'Oeste', 'Sureste', 'Suroeste', 'Noreste', 'Noroeste'.")],
+    ancho_hueco_m: Annotated[float, Field(description="Ancho de la ventana en metros (m).", gt=0.0)],
+    alto_hueco_m: Annotated[float, Field(description="Alto de la ventana en metros (m).", gt=0.0)],
+    retranqueo_m: Annotated[float, Field(description="Profundidad del retranqueo de la ventana respecto al plano exterior de fachada en metros (m).", ge=0.0)] = 0.0,
+    vuelo_voladizo_m: Annotated[float, Field(description="Saliente o vuelo del voladizo o alero superior en metros (m).", ge=0.0)] = 0.0,
+    tiene_toldo: Annotated[bool, Field(description="Indica si el hueco dispone de toldo u obstáculo móvil exterior de protección solar.")] = False
+) -> Dict[str, Any]:
+    """Cálculo normativo de factores de sombra propios para ventanas y huecos (CTE DB-HE).
+    
+    Args:
+        orientacion: Orientación solar de la ventana.
+        ancho_hueco_m: Anchura del hueco en metros.
+        alto_hueco_m: Altura del hueco en metros.
+        retranqueo_m: Retranqueo respecto al paramento en metros.
+        vuelo_voladizo_m: Vuelo del voladizo en metros.
+        tiene_toldo: Presencia de toldo de protección solar.
+        
+    Returns:
+        Diccionario con factor de sombra en verano (F_sh,verano), factor en invierno (F_sh,invierno) y factor solar modificado Fs.
+    """
+    return calcular_sombras_estacionales_hueco(orientacion, ancho_hueco_m, alto_hueco_m, retranqueo_m, vuelo_voladizo_m, tiene_toldo)
+
+
+DESC_CONTRASTAR_FACTURAS = """Compara el consumo real de energía de los últimos 12 meses (electricidad, gas natural o gasóleo) obtenido de facturas con el consumo teórico calculado por CE3X para evaluar la fiabilidad de la calificación y detectar anomalías de uso.
+
+Cuándo usar:
+    Invoque esta herramienta para contrastar la calificación teórica con la realidad del usuario conforme al procedimiento de validación y contraste con facturas del RD 390/2021.
+
+Comportamiento y efectos secundarios:
+    Operación analítica de solo lectura (Read-Only). No altera archivos."""
+
+@mcp.tool(description=DESC_CONTRASTAR_FACTURAS, annotations={"read_only_hint": True, "idempotent_hint": True})
+def contrastar_consumo_facturas_reales(
+    consumo_teorico_kwh_ano: Annotated[float, Field(description="Consumo teórico anual total calculado por CE3X en kWh/año.", gt=0.0)],
+    electricidad_real_kwh: Annotated[float, Field(description="Consumo eléctrico real facturado de los últimos 12 meses en kWh.", ge=0.0)] = 0.0,
+    gas_natural_real_kwh: Annotated[float, Field(description="Consumo real de gas natural de los últimos 12 meses en kWh.", ge=0.0)] = 0.0,
+    gasoleo_real_litros: Annotated[float, Field(description="Consumo real de gasóleo de calefacción de los últimos 12 meses en litros.", ge=0.0)] = 0.0
+) -> Dict[str, Any]:
+    """Contraste y validación de consumo teórico vs facturas energéticas reales (RD 390/2021).
+    
+    Args:
+        consumo_teorico_kwh_ano: Consumo simulado por el modelo térmico en kWh/año.
+        electricidad_real_kwh: Electricidad facturada en kWh.
+        gas_natural_real_kwh: Gas natural facturado en kWh.
+        gasoleo_real_litros: Litros de gasóleo consumidos.
+        
+    Returns:
+        Diccionario con consumo real total en energía final (kWh/año), desviación porcentual, factor de concordancia y diagnóstico técnico.
+    """
+    return contrastar_facturas_reales(consumo_teorico_kwh_ano, electricidad_real_kwh, gas_natural_real_kwh, gasoleo_real_litros)
+
+
+DESC_OBSTACULO_EDIFICIO = """Calcula el ángulo de elevación solar alfa (grados) y la tabla de perfil de sombras producida por un obstáculo remoto continuo (edificio colindante o frente a fachada) según el Anejo E del CTE DB-HE.
+
+Cuándo usar:
+    Utilice esta herramienta para modelar sombras arrojadas por construcciones vecinas o accidentes topográficos. Para elementos propios del hueco (voladizos, retranqueos, aleros), use 'calcular_sombras_hueco'.
+
+Comportamiento y efectos secundarios:
+    Operación analítica de cálculo geométrico solar (Read-Only). No escribe archivos ni altera estado."""
+
+@mcp.tool(description=DESC_OBSTACULO_EDIFICIO, annotations={"read_only_hint": True, "idempotent_hint": True})
 def calcular_sombras_obstaculo_edificio_enfrente(
-    distancia_edificio_m: float,
-    altura_edificio_m: float,
-    orientacion_fachada: str = "Sur",
-    descripcion_obstaculo: Optional[str] = None
+    distancia_edificio_m: Annotated[float, Field(description="Distancia horizontal en metros (m) desde la fachada del edificio evaluado hasta el obstáculo o edificio de enfrente.", gt=0.0)],
+    altura_edificio_m: Annotated[float, Field(description="Altura del edificio u obstáculo de enfrente en metros (m) medida por encima del centro del hueco evaluado.", gt=0.0)],
+    orientacion_fachada: Annotated[str, Field(description="Orientación de la fachada que recibe la sombra: 'Sur', 'Norte', 'Este', 'Oeste', 'Sureste', 'Suroeste', 'Noreste', 'Noroeste'.")],
+    descripcion_obstaculo: Annotated[str, Field(description="Descripción del obstáculo remoto (ej. 'Edificio de 6 plantas enfrente').")] = "Edificio colindante"
 ) -> Dict[str, Any]:
+    """Cálculo geométrico solar de patrones de sombra de obstáculos remotos (CTE DB-HE Anejo E).
+    
+    Args:
+        distancia_edificio_m: Distancia horizontal en metros al obstáculo.
+        altura_edificio_m: Altura del obstáculo respecto al hueco en metros.
+        orientacion_fachada: Orientación solar de la fachada receptora.
+        descripcion_obstaculo: Etiqueta descriptiva del obstáculo.
+        
+    Returns:
+        Diccionario con ángulo alfa (°), tabla de perfil de obstáculos (azimut y elevación) y reducción de radiación estimada.
     """
-    Calcula el angulo de elevacion alfa del patron de sombra producido por un obstaculo remoto
-    (edificio de enfrente, colindante o accidente geografico) y su factor reductor de radiacion
-    solar estacional F_sh conforme al CTE DB-HE y el motor de calculo oficial de CE3X v3.2.
-    """
-    return calcular_patron_sombras_edificio_colindante(
-        distancia_edificio_m=distancia_edificio_m,
-        altura_edificio_m=altura_edificio_m,
-        orientacion_fachada=orientacion_fachada,
-        descripcion_obstaculo=descripcion_obstaculo
-    )
+    return calcular_patron_sombras_edificio_colindante(distancia_edificio_m, altura_edificio_m, orientacion_fachada, descripcion_obstaculo)
 
-@mcp.tool()
+
+DESC_TERCIARIO = """Estima los parámetros normativos obligatorios de CE3X para edificios de uso Terciario y Locales Comerciales: potencia de iluminación instalada (W/m²), VEEI, caudales de ventilación (RITE IDA) y tasa de ocupación según CTE DB-HE3 y RITE.
+
+Cuándo usar:
+    Invoque esta herramienta obligatoriamente cuando el edificio o inmueble certificado sea de uso terciario o local comercial para obtener los parámetros de iluminación y ventilación que exige CE3X en terciario.
+
+Comportamiento y efectos secundarios:
+    Operación analítica de solo lectura (Read-Only). No modifica archivos ni registros locales."""
+
+@mcp.tool(description=DESC_TERCIARIO, annotations={"read_only_hint": True, "idempotent_hint": True})
 def calcular_parametros_terciario_local_comercial(
-    tipo_actividad: str = "Comercio",
-    superficie_util_m2: float = 100.0,
-    tipo_luminaria: str = "LED",
-    nivel_iluminacion_lux: Optional[float] = None
+    tipo_actividad: Annotated[str, Field(description="Tipo de actividad del local o edificio terciario (ej. 'Comercial', 'Oficinas', 'Docente', 'Restauracion', 'Sanitario').")],
+    superficie_util_m2: Annotated[float, Field(description="Superficie útil del local comercial en metros cuadrados (m²).", gt=0.0)],
+    tipo_luminaria: Annotated[str, Field(description="Tecnología de iluminación principal: 'LED', 'Fluorescencia', 'Halogena', 'Incandescente'.")] = "LED",
+    nivel_iluminacion_lux: Annotated[float, Field(description="Nivel medio de iluminancia mantenida en lux según exigencias de la actividad (CTE DB-HE3). Por defecto 500 lux.", gt=0.0)] = 500.0
 ) -> Dict[str, Any]:
+    """Estimación normativa de parámetros de iluminación, VEEI y ventilación en edificios terciarios.
+    
+    Args:
+        tipo_actividad: Uso terciario del local.
+        superficie_util_m2: Superficie útil en m².
+        tipo_luminaria: Tecnología de fuentes de luz.
+        nivel_iluminacion_lux: Iluminancia en lux.
+        
+    Returns:
+        Diccionario con potencia de iluminación (W/m²), VEEI límite, caudal de aire exterior (IDA) y densidad de carga interna.
     """
-    Estima los parametros normativos obligatorios de CE3X para edificios de uso Terciario y Locales
-    Comerciales: potencia de iluminacion instalada (W/m2), VEEI segun CTE DB-HE 3, consumo anual estimado
-    y tasa de renovacion de aire exterior / calidad del aire segun RITE (IDA 2 / IDA 3).
-    """
-    return estimar_parametros_terciario_comercial(
-        tipo_actividad=tipo_actividad,
-        superficie_util_m2=superficie_util_m2,
-        tipo_luminaria=tipo_luminaria,
-        nivel_iluminacion_lux=nivel_iluminacion_lux
-    )
+    return estimar_parametros_terciario_comercial(tipo_actividad, superficie_util_m2, tipo_luminaria, nivel_iluminacion_lux)
 
 
+DESC_FLUJOMETRIA = """Registra formalmente un ensayo in situ de flujometría térmica con termoflujómetro y sondas de temperatura según norma ISO 9869-1, calculando la transmitancia térmica real U (W/m²K) y la resistencia térmica R del cerramiento.
 
-@mcp.tool()
+Cuándo usar:
+    Utilice esta herramienta cuando se hayan realizado mediciones directas in situ con termoflujómetro para acreditar la transmitancia real de un muro histórico sin necesidad de estimarlo por defecto.
+
+Comportamiento y efectos secundarios:
+    Operación analítica de cálculo normativo (Read-Only). Devuelve el valor oficial de U para su inserción como valor conocido en CE3X."""
+
+@mcp.tool(description=DESC_FLUJOMETRIA, annotations={"read_only_hint": True, "idempotent_hint": True})
 def registrar_ensayo_flujometria_termica_in_situ(
-    flujo_medio_w_m2: float,
-    temp_interior_media_c: float,
-    temp_exterior_media_c: float,
-    duracion_ensayo_horas: float = 72.0,
-    elemento_analizado: str = "Fachada principal"
+    flujo_medio_w_m2: Annotated[float, Field(description="Densidad de flujo de calor media medida a través del cerramiento en vatios por metro cuadrado (W/m²).", gt=0.0)],
+    temp_interior_media_c: Annotated[float, Field(description="Temperatura media del aire interior durante el ensayo en grados Celsius (°C).")],
+    temp_exterior_media_c: Annotated[float, Field(description="Temperatura media del aire exterior durante el ensayo en grados Celsius (°C).")],
+    duracion_ensayo_horas: Annotated[float, Field(description="Duración total del registro continuo en horas (mínimo 72 h según ISO 9869-1).", ge=24.0)] = 72.0,
+    elemento_analizado: Annotated[str, Field(description="Descripción del cerramiento ensayado (ej. 'Muro de fachada de ladrillo visto').")] = "Muro de fachada exterior"
 ) -> Dict[str, Any]:
+    """Cálculo y acreditación oficial de ensayo de flujometría térmica in situ (ISO 9869-1).
+    
+    Args:
+        flujo_medio_w_m2: Flujo térmico medido en W/m².
+        temp_interior_media_c: Temperatura interior media en °C.
+        temp_exterior_media_c: Temperatura exterior media en °C.
+        duracion_ensayo_horas: Horas de ensayo continuas.
+        elemento_analizado: Elemento constructivo evaluado.
+        
+    Returns:
+        Diccionario con transmitancia térmica real U (W/m²K), resistencia térmica R (m²K/W) y validez del ensayo según ISO 9869-1.
     """
-    Registra formalmente un ensayo in situ de flujometria termica con termoflujometro y sondas de
-    contacto conforme a la norma UNE-EN ISO 9869-1, calculando la transmitancia termica U real
-    (W/m2K) del cerramiento para justificar el nivel conocido en CE3X y el Anexo IV del RD 390/2021.
-    """
-    return registrar_ensayo_flujometria_termica_iso9869(
-        flujo_medio_w_m2=flujo_medio_w_m2,
-        temp_interior_media_c=temp_interior_media_c,
-        temp_exterior_media_c=temp_exterior_media_c,
-        duracion_ensayo_horas=duracion_ensayo_horas,
-        elemento_analizado=elemento_analizado
-    )
+    return registrar_ensayo_flujometria_termica_iso9869(flujo_medio_w_m2, temp_interior_media_c, temp_exterior_media_c, duracion_ensayo_horas, elemento_analizado)
 
 
+DESC_VENTANA_ISO10077 = """Calcula la transmitancia térmica total Uw (W/m²K) de una ventana conforme a la norma UNE-EN ISO 10077-1, ponderando las áreas de vidrio y marco e incorporando el efecto del intercalario térmico.
 
-@mcp.tool()
+Cuándo usar:
+    Utilice esta herramienta para calcular con precisión la transmitancia de huecos acristalados a partir de los datos técnicos de marco y vidrio antes de introducirlos en la envolvente térmica de CE3X.
+
+Comportamiento y efectos secundarios:
+    Operación analítica de solo lectura (Read-Only). No altera archivos ni estado local."""
+
+@mcp.tool(description=DESC_VENTANA_ISO10077, annotations={"read_only_hint": True, "idempotent_hint": True})
 def calcular_transmitancia_ventana_iso10077(
-    ancho_m: float,
-    alto_m: float,
-    u_vidrio_w_m2k: float,
-    u_marco_w_m2k: float,
-    fraccion_marco: float = 0.25,
-    tipo_intercalario: str = "termicamente_mejorado"
+    ancho_m: Annotated[float, Field(description="Ancho del hueco de ventana en metros (m).", gt=0.0)],
+    alto_m: Annotated[float, Field(description="Alto del hueco de ventana en metros (m).", gt=0.0)],
+    u_vidrio_w_m2k: Annotated[float, Field(description="Transmitancia térmica del vidrio Ug en W/m²K (ej. 5.7 para simple, 2.8 para doble estándar, 1.1 para bajo emisivo).", gt=0.0)],
+    u_marco_w_m2k: Annotated[float, Field(description="Transmitancia térmica del marco Uf en W/m²K (ej. 5.7 para metálico sin RPT, 3.2 con RPT, 2.2 para madera, 1.8 para PVC).", gt=0.0)],
+    fraccion_marco: Annotated[float, Field(description="Fracción de superficie ocupada por el marco respecto al hueco total (0.10 a 0.50). Por defecto 0.20 (20%).", ge=0.05, le=0.60)] = 0.20,
+    tipo_intercalario: Annotated[str, Field(description="Tipo de espaciador o intercalario del doble acristalamiento: 'aluminio' o 'calido_warm_edge'.")] = "aluminio"
 ) -> Dict[str, Any]:
+    """Cálculo analítico de transmitancia térmica de ventana Uw según UNE-EN ISO 10077-1.
+    
+    Args:
+        ancho_m: Ancho de la ventana en metros.
+        alto_m: Alto de la ventana en metros.
+        u_vidrio_w_m2k: Transmitancia del vidrio en W/m²K.
+        u_marco_w_m2k: Transmitancia del marco en W/m²K.
+        fraccion_marco: Porcentaje de marco respecto al hueco.
+        tipo_intercalario: Tipo de espaciador perimetral.
+        
+    Returns:
+        Diccionario con transmitancia global Uw (W/m²K), área total del hueco (m²), desglose de áreas de vidrio y marco y puente térmico lineal intercalario.
     """
-    Calcula la transmitancia termica total Uw (W/m2K) de una ventana conforme a la norma
-    UNE-EN ISO 10077-1 (metodo de componentes: vidrio Ug, marco Uf y puente termico de intercalario
-    Psi_g) para justificar el nivel conocido de huecos en el software oficial CE3X v3.2.
-    """
-    return calcular_transmitancia_ventana_iso10077(
-        ancho_m=ancho_m,
-        alto_m=alto_m,
-        u_vidrio_w_m2k=u_vidrio_w_m2k,
-        u_marco_w_m2k=u_marco_w_m2k,
-        fraccion_marco=fraccion_marco,
-        tipo_intercalario=tipo_intercalario
-    )
+    return calcular_transmitancia_ventana_iso10077(ancho_m, alto_m, u_vidrio_w_m2k, u_marco_w_m2k, fraccion_marco, tipo_intercalario)
 
-@mcp.tool()
+
+DESC_DEMANDA_ACS = """Calcula la demanda normativa obligatoria de Agua Caliente Sanitaria (ACS) a 60 °C en litros/día según las tablas oficiales del Código Técnico de la Edificación CTE DB-HE4 y la temperatura de agua fría de red.
+
+Cuándo usar:
+    Invoque esta herramienta para determinar el volumen reglamentario diario de ACS necesario para dimensionar las instalaciones térmicas de producción y cobertura solar en CE3X.
+
+Comportamiento y efectos secundarios:
+    Operación analítica de solo lectura (Read-Only). No altera archivos ni registros locales."""
+
+@mcp.tool(description=DESC_DEMANDA_ACS, annotations={"read_only_hint": True, "idempotent_hint": True})
 def calcular_demanda_acs_cte_he4(
-    numero_dormitorios: int = 3,
-    numero_personas: Optional[float] = None,
-    provincia: str = "A Coruña",
-    tipo_edificio: str = "ViviendaBloque"
+    numero_dormitorios: Annotated[int, Field(description="Número de dormitorios de la vivienda (para residenciales privados).", ge=0)] = 3,
+    numero_personas: Annotated[Optional[float], Field(description="Número de personas u ocupantes directos calculados o previstos.")] = None,
+    provincia: Annotated[str, Field(description="Provincia donde se ubica el edificio para fijar la temperatura de agua de red (ej. 'Madrid', 'A Coruña', 'Sevilla').")] = "A Coruña",
+    tipo_edificio: Annotated[str, Field(description="Tipología de uso: 'ViviendaUnifamiliar', 'ViviendaBloque', 'Hotel_3_estrellas', 'Hospital', 'Residencia', 'Gimnasio'.")] = "ViviendaBloque"
 ) -> Dict[str, Any]:
-    """
-    Calcula la demanda normativa obligatoria de Agua Caliente Sanitaria (ACS) a 60 C en litros/dia
-    y la demanda energetica anual en kWh/ano conforme a la Tabla 3.1 del CTE DB-HE 4 y la temperatura
-    media provincial del agua de red para introducir en los Datos Generales de CE3X.
+    """Cálculo reglamentario de demanda de ACS a 60 °C según CTE DB-HE4.
+    
+    Args:
+        numero_dormitorios: Número de dormitorios de la vivienda.
+        numero_personas: Ocupantes directos si se conocen.
+        provincia: Provincia española para temperatura del agua de red.
+        tipo_edificio: Tipología edificatoria CTE.
+        
+    Returns:
+        Diccionario con demanda diaria a 60 °C (litros/día), demanda energética anual (kWh/año) y temperatura de agua de red provincial.
     """
     return calcular_demanda_acs_cte_he4(
         numero_dormitorios=numero_dormitorios,
@@ -865,6 +1200,61 @@ def calcular_demanda_acs_cte_he4(
         provincia=provincia,
         tipo_edificio=tipo_edificio
     )
+
+
+DESC_GESTION_CACHE = """Gestiona el subsistema de caché persistente SQLite local (~/.ce3x_mcp/cache.db) para consultas a Catastro (TTL 30 días) y radiación solar satelital PVGIS (TTL 90 días).
+
+Cuándo usar:
+    Utilice esta herramienta para consultar el espacio ocupado y la tasa de aciertos (hits/misses) de la caché o para invalidar entradas antiguas si se requiere forzar una recarga telemática fresca.
+
+Comportamiento y efectos secundarios:
+    Operación de mantenimiento del sistema de caché local. 'estadisticas' es de solo lectura (Read-Only); 'purgar_expiradas' y 'vaciar_todo' purgan registros obsoletos de la base de datos SQLite local."""
+
+@mcp.tool(description=DESC_GESTION_CACHE, annotations={"read_only_hint": False, "destructive_hint": False})
+def gestionar_cache_ce3x(
+    accion: Annotated[str, Field(description="Acción a realizar en el subsistema de caché: 'estadisticas', 'purgar_expiradas' o 'vaciar_todo'.")] = "estadisticas",
+    categoria: Annotated[Optional[str], Field(description="Categoría específica de caché a gestionar ('catastro' o 'pvgis'). Opcional.")] = None
+) -> Dict[str, Any]:
+    """Gestión y mantenimiento del subsistema de caché SQLite persistente.
+    
+    Args:
+        accion: 'estadisticas' (default), 'purgar_expiradas' o 'vaciar_todo'.
+        categoria: 'catastro' o 'pvgis' para filtrar la purga.
+        
+    Returns:
+        Diccionario con estadísticas de almacenamiento (tamaño en bytes, total entradas, hits, misses) o confirmación de purga.
+    """
+    from ce3x_mcp.services.cache_manager import (
+        obtener_estadisticas_cache,
+        purgar_cache_expirada,
+        vaciar_cache_completa
+    )
+    act = accion.strip().lower()
+    if act == "estadisticas":
+        stats = obtener_estadisticas_cache()
+        stats["accion_ejecutada"] = "estadisticas"
+        return stats
+    elif act == "purgar_expiradas":
+        purgadas = purgar_cache_expirada()
+        stats = obtener_estadisticas_cache()
+        stats["accion_ejecutada"] = "purgar_expiradas"
+        stats["entradas_eliminadas"] = purgadas
+        return stats
+    elif act == "vaciar_todo":
+        vaciadas = vaciar_cache_completa(categoria)
+        stats = obtener_estadisticas_cache()
+        stats["accion_ejecutada"] = "vaciar_todo"
+        stats["entradas_eliminadas"] = vaciadas
+        return stats
+    else:
+        return {
+            "error": f"Acción desconocida '{accion}'. Use 'estadisticas', 'purgar_expiradas' o 'vaciar_todo'.",
+            "acciones_validas": ["estadisticas", "purgar_expiradas", "vaciar_todo"]
+        }
+
+# ==============================================================================
+# RECURSOS Y PROMPTS
+# ==============================================================================
 
 @mcp.resource("ce3x://normativa/factores_paso")
 def obtener_factores_paso_normativos() -> str:
@@ -927,44 +1317,6 @@ Para la vivienda o edificio analizado, realiza los siguientes cálculos:
 3. Calcula la deducción en el IRPF correspondiente (40% o 60% en rehabilitación integral).
 4. Emite el dictamen técnico justificativo oficial listo para registrar ante la administración autonómica."""
 
-@mcp.tool()
-def gestionar_cache_ce3x(accion: str = "estadisticas", categoria: Optional[str] = None) -> Dict[str, Any]:
-    """
-    Gestiona el subsistema de caché persistente SQLite local (~/.ce3x_mcp/cache.db).
-    Acelera consultas recurrentes a Catastro (OVC) y radiación solar (PVGIS) a menos de 5 ms.
-    
-    Parámetros:
-    - accion: 'estadisticas' (default), 'purgar_expiradas' o 'vaciar_todo'.
-    - categoria: opcional, filtrar por 'catastro' o 'pvgis'.
-    """
-    from ce3x_mcp.services.cache_manager import (
-        obtener_estadisticas_cache,
-        purgar_cache_expirada,
-        vaciar_cache_completa
-    )
-    act = accion.strip().lower()
-    if act == "estadisticas":
-        stats = obtener_estadisticas_cache()
-        stats["accion_ejecutada"] = "estadisticas"
-        return stats
-    elif act == "purgar_expiradas":
-        purgadas = purgar_cache_expirada()
-        stats = obtener_estadisticas_cache()
-        stats["accion_ejecutada"] = "purgar_expiradas"
-        stats["entradas_eliminadas"] = purgadas
-        return stats
-    elif act == "vaciar_todo":
-        vaciadas = vaciar_cache_completa(categoria)
-        stats = obtener_estadisticas_cache()
-        stats["accion_ejecutada"] = "vaciar_todo"
-        stats["entradas_eliminadas"] = vaciadas
-        return stats
-    else:
-        return {
-            "error": f"Acción desconocida '{accion}'. Use 'estadisticas', 'purgar_expiradas' o 'vaciar_todo'.",
-            "acciones_validas": ["estadisticas", "purgar_expiradas", "vaciar_todo"]
-        }
-
 def main():
     import sys
     transport = os.environ.get("MCP_TRANSPORT", "stdio").lower()
@@ -989,6 +1341,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
