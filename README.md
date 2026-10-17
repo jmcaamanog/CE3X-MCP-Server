@@ -1,4 +1,4 @@
-# 🏢 CE3X-MCP-Server (Certificación Energética con IA & FastMCP)
+# 🏢 CE3X-MCP-Server (Certificación Energética con IA)
 
 | 🏗️ Perfil & ConTech | 📈 Repositorio & Enlaces |
 | :--- | :--- |
