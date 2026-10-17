@@ -19,21 +19,21 @@
 
 | 🌟 Recurso | 🚀 Acción / Enlace | 📝 Descripción |
 | :--- | :--- | :--- |
-| **Estructura de Visita** | 📁 **[Ver Guía 5 Carpetas](./docs/ESTRUCTURA_CARPETA_VISITA.md)** | Arquitectura canónica para organizar fotos, planos, notas y certificados. |
-| **Estudio de Conectores** | 🌐 **[Ver Estudio Integral de Conexiones](./docs/ESTUDIO_INTEGRAL_CONECTORES_CE3X_MCP.md)** | Mapeo pantalla a pantalla, botón a botón y ensayos de CE3X a conectores de IA. |
-| **Documento de Análisis** | 📄 **[Ver Análisis CE3X & MCP](./docs/analisis_ce3x_mcp_framework.md)** | Análisis exhaustivo del software, manuales técnicos y arquitectura modular. |
-| **Plantilla de Campo** | 📋 **[Ver Plantilla de Toma de Datos](./docs/PLANTILLA_TOMA_DATOS_CEE.md)** | Formulario estructurado para visitas de campo y dictado por voz. |
-| **Guía para tu IA** | 🧠 **[Ver Instrucciones para la IA](./docs/GUIA_PROMPTS_Y_INSTRUCCIONES_IA.md)** | System prompts y protocolo de primer contacto para Claude, Gemini y Cursor. |
-| **Historial de Versiones** | 📜 **[Ver Changelog](./CHANGELOG.md)** | Registro detallado de versiones y mejoras implementadas. |
-| **Código de Conducta** | 🤝 **[Ver Código de Conducta](./CODE_OF_CONDUCT.md)** | El manual del buen rollo y convivencia comunitaria. |
-| **Guía de Contribución** | 🛠️ **[Ver Cómo Contribuir](./CONTRIBUTING.md)** | Pautas para reportar bugs, proponer ideas y enviar Pull Requests. |
-| **Instalador 1-Clic** | 🖱️ **[Ver Instalador Windows](./instalar_en_claude_desktop.bat)** | Script autoejecutable para configurar Claude Desktop y Cursor. |
-| **Skills para Claude/GPT/Gemini** | 🧠 **[Ver Guía de Skills](./docs/GUIA_SKILL_CLAUDE_GPT_GEMINI.md)** | Manual operativo para que cualquier IA razone como un Arquitecto Técnico. |
-| **Paquete PyPI Oficial** | 📦 **[Ver en PyPI](https://pypi.org/project/ce3x-mcp-server/)** | Distribución oficial en el Python Package Index (`pip install ce3x-mcp-server`). |
-| **Glama MCP Registry** | 🌐 **[Ver en Glama.ai](https://glama.ai/mcp/servers/jmcaamanog/CE3X-MCP-Server)** | Directorio oficial de servidores MCP e Inspector web interactivo. |
-| **Notas de Release v1.0** | 📜 **[Ver Release Notes v1.0](./docs/RELEASE_NOTES_v1.0.md)** | Manifiesto de capacidades, paquetes wheel y distribución oficial. |
-| **Seguridad** | 🛡️ **[Ver Política de Seguridad](./SECURITY.md)** | Divulgación responsable y reporte de vulnerabilidades. |
-| **Repositorio GitHub** | 💻 **[GitHub jmcaamanog](https://github.com/jmcaamanog/CE3X-MCP-Server)** | Código fuente, issues y lanzamientos oficiales. |
+| **Estructura de Visita** | **[Guía 5 Carpetas](./docs/ESTRUCTURA_CARPETA_VISITA.md)** | Arquitectura canónica para organizar fotos, planos, notas y certificados. |
+| **Estudio de Conectores** | **[Conexiones](./docs/ESTUDIO_INTEGRAL_CONECTORES_CE3X_MCP.md)** | Mapeo pantalla a pantalla, botón a botón y ensayos de CE3X a conectores de IA. |
+| **Documento de Análisis** | **[Análisis CE3X & MCP](./docs/analisis_ce3x_mcp_framework.md)** | Análisis exhaustivo del software, manuales técnicos y arquitectura modular. |
+| **Plantilla de Campo** | **[Plantilla de Datos](./docs/PLANTILLA_TOMA_DATOS_CEE.md)** | Formulario estructurado para visitas de campo y dictado por voz. |
+| **Guía para tu IA** | **[Instrucciones para la IA](./docs/GUIA_PROMPTS_Y_INSTRUCCIONES_IA.md)** | System prompts y protocolo de primer contacto para Claude, Gemini y Cursor. |
+| **Historial de Versiones** | **[Changelog](./CHANGELOG.md)** | Registro detallado de versiones y mejoras implementadas. |
+| **Código de Conducta** |  **[Código de Conducta](./CODE_OF_CONDUCT.md)** | El manual del buen rollo y convivencia comunitaria. |
+| **Guía de Contribución** | **[Cómo Contribuir](./CONTRIBUTING.md)** | Pautas para reportar bugs, proponer ideas y enviar Pull Requests. |
+| **Instalador 1-Clic** | **[Instalador Windows](./instalar_en_claude_desktop.bat)** | Script autoejecutable para configurar Claude Desktop y Cursor. |
+| **Skills para Claude/GPT/Gemini** | **[Guía de Skills](./docs/GUIA_SKILL_CLAUDE_GPT_GEMINI.md)** | Manual operativo para que cualquier IA razone como un Arquitecto Técnico. |
+| **Paquete PyPI Oficial** | **[PyPI](https://pypi.org/project/ce3x-mcp-server/)** | Distribución oficial en el Python Package Index (`pip install ce3x-mcp-server`). |
+| **Glama MCP Registry** | **[Glama.ai](https://glama.ai/mcp/servers/jmcaamanog/CE3X-MCP-Server)** | Directorio oficial de servidores MCP e Inspector web interactivo. |
+| **Notas de Release v1.0** | **[Release Notes v1.0](./docs/RELEASE_NOTES_v1.0.md)** | Manifiesto de capacidades, paquetes wheel y distribución oficial. |
+| **Seguridad** | **[Política de Seguridad](./SECURITY.md)** | Divulgación responsable y reporte de vulnerabilidades. |
+| **Repositorio GitHub** | **[GitHub jmcaamanog](https://github.com/jmcaamanog/CE3X-MCP-Server)** | Código fuente, issues y lanzamientos oficiales. |
 
 ---
 
