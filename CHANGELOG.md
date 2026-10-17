@@ -4,7 +4,7 @@ En este documento se detalla la evolución y el lanzamiento oficial del servidor
 
 ---
 
-### Versión 1.5.1 — 17/10/2026: 🚀 Desacoplamiento de CI, Saneamiento de Superficies HVAC, Medidas de Mejora RD 390 y Seguridad DevSecOps
+### Versión 1.5.1 — 17/10/2026: 🚀 Desacoplamiento de CI, Saneamiento de Superficies HVAC y Medidas de Mejora RD 390
 
 Actualización de estabilidad, rigor técnico y experiencia de usuario que consolida el flujo integral de certificación sin bloqueos en la interfaz gráfica de CE3X v3.2 y optimiza la infraestructura de CI/CD:
 
@@ -23,11 +23,7 @@ Actualización de estabilidad, rigor técnico y experiencia de usuario que conso
    * Detección contextual del entorno en la batería de pruebas: valida ejecutables locales (`xml2cert.exe`, `CE3Xv3.2.exe`) cuando están presentes y ejecuta las pruebas analíticas, catastrales y matemáticas de forma desacoplada en los runners en la nube de GitHub Actions (`windows-latest` en Azure).
    * Corrección de rutas estáticas en `sys.path` a resolución dinámica relativa al repositorio.
 
-4. **Blindaje de Seguridad y DevSecOps en Repositorio GitHub**:
-   * Desindexación de Git y exclusión en `.gitignore` de scripts de mantenimiento de PyPI (`subir_a_pypi.bat`), manteniéndolos en local para el autor sin exponerlos públicamente.
-   * Configuración de GitHub Advanced Security: activación de *Private Vulnerability Reporting* y *Push Protection* para prevenir la filtración accidental de credenciales o secretos en commits.
-
-5. **Plantilla Canónica de Toma de Datos In Situ en Madrid (Datos 100% Ficticios)**:
+4. **Plantilla Canónica de Toma de Datos In Situ en Madrid (Datos 100% Ficticios)**:
    * Publicación de la plantilla de campo completa y cubierta `ejemplos/PLANTILLA_TOMA_DATOS_EJEMPLO_MADRID.txt` y en `ejemplos/visita_vivienda_ejemplo/INFORMACION/apuntes_visita.txt`.
    * Incluye datos exhaustivos pero enteramente ficticios para la Comunidad de Madrid (Zona D3, 1974, 94.20 m²): técnico ficticio colegiado, termo eléctrico de 100L, caldera de condensación de 25 kW, split inverter Daikin de 3.5 kW, desglose de huecos con RPT y PVC bajo emisivo, sombra de edificio enfrente y protocolo formal del Anexo IV del RD 390/2021.
 
