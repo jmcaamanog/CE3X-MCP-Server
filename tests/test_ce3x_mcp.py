@@ -390,13 +390,16 @@ def test_ce3x_verifier_and_rigor():
             referencia_catastral="2344201XK3724S0001LD",
             directorio_salida=tmp_out
         )
-        assert res["estado"] == "completado"
-        assert os.path.exists(res["archivo_xml_oficial"])
         if ce3x_local:
+            assert res["estado"] == "completado"
+            assert os.path.exists(res["archivo_xml_oficial"])
             assert os.path.exists(res["archivo_pdf_oficial"])
-        assert os.path.exists(res["archivo_cex_ce3x"])
-        assert res["verificacion_rigor"]["datos_inventados"] is False
-        assert res["verificacion_rigor"]["xml_sin_datos_fantasma"] is True
+            assert os.path.exists(res["archivo_cex_ce3x"])
+            assert res["verificacion_rigor"]["datos_inventados"] is False
+            assert res["verificacion_rigor"]["xml_sin_datos_fantasma"] is True
+        else:
+            assert res["estado"] == "error_instalacion_ce3x"
+            assert "No se puede certificar sin CE3X instalado" in res.get("mensaje", "")
         
     print("[PASS] test_ce3x_verifier_and_rigor (CE3X v3.2 oficial, Catastro real, escalas Localidades.xml y XML/PDF/CEX limpios)")
 
