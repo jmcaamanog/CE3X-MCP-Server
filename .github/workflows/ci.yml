@@ -58,5 +58,7 @@ jobs:
         pip install ifcopenshell
 
     - name: Run Unit & Integration Tests
+      env:
+        PYTHONIOENCODING: utf-8
       run: |
         python tests/test_ce3x_mcp.py

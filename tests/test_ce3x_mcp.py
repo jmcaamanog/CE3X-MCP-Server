@@ -465,16 +465,32 @@ def test_cache_and_progress():
     print("[PASS] test_cache_and_progress (Caché persistente SQLite, TTL, purga, estadísticas y Context FastMCP)")
 
 if __name__ == "__main__":
-    test_cache_and_progress()
-    test_ce3x_verifier_and_rigor()
-    test_libraries()
-    test_smart_folder_auditor()
-    test_cte_climate()
-    test_xml_generation()
-    test_equipment_parser()
-    test_improvement_engine_and_nextgen()
-    test_pvgis()
-    test_trials_and_tests()
-    test_exhaustive_matrix_scenarios()
-    print("\nTODOS LOS TESTS UNITARIOS, DE INTEGRACIÓN Y MATRICES DE ESCENARIOS HAN PASADO EXITOSAMENTE (100%)!")
-
+    import sys, traceback
+    tests = [
+        ("test_cache_and_progress", test_cache_and_progress),
+        ("test_ce3x_verifier_and_rigor", test_ce3x_verifier_and_rigor),
+        ("test_libraries", test_libraries),
+        ("test_smart_folder_auditor", test_smart_folder_auditor),
+        ("test_cte_climate", test_cte_climate),
+        ("test_xml_generation", test_xml_generation),
+        ("test_equipment_parser", test_equipment_parser),
+        ("test_improvement_engine_and_nextgen", test_improvement_engine_and_nextgen),
+        ("test_pvgis", test_pvgis),
+        ("test_trials_and_tests", test_trials_and_tests),
+        ("test_exhaustive_matrix_scenarios", test_exhaustive_matrix_scenarios),
+    ]
+    failed = []
+    for name, fn in tests:
+        try:
+            print(f"=== [START] {name} ===")
+            fn()
+            print(f"=== [PASS] {name} ===\n")
+        except Exception as e:
+            print(f"=== [FAIL] {name}: {e} ===")
+            traceback.print_exc()
+            failed.append(name)
+    if failed:
+        print(f"\nFAILED TESTS ({len(failed)}): {failed}")
+        sys.exit(1)
+    else:
+        print("\nTODOS LOS TESTS HAN PASADO EXITOSAMENTE (100%)!")
