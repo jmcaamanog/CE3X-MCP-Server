@@ -4,6 +4,35 @@ En este documento se detalla la evolución y el lanzamiento oficial del servidor
 
 ---
 
+### Versión 1.5.1 — 17/10/2026: 🚀 Desacoplamiento de CI, Saneamiento de Superficies HVAC, Medidas de Mejora RD 390 y Seguridad DevSecOps
+
+Actualización de estabilidad, rigor técnico y experiencia de usuario que consolida el flujo integral de certificación sin bloqueos en la interfaz gráfica de CE3X v3.2 y optimiza la infraestructura de CI/CD:
+
+1. **Saneamiento Matemático de Instalaciones Térmicas en el Codec CEX**:
+   * Corrección definitiva del modal de error de CE3X *"La instalación de calefacción cubre una demanda superior al 100%"*:
+   * Se implementó un algoritmo de prorrateo y escalado proporcional de superficies útiles habitables para generadores térmicos coexistentes, garantizando que la suma de áreas asignadas nunca exceda la superficie útil total del inmueble (`superficie_util = 95.85 m²`).
+   * Validación satisfactoria en vivo en la GUI oficial de CE3X v3.2: cálculo instantáneo de la etiqueta energética (**Letra E, 45.7 kgCO2/m²**).
+
+2. **Inyección Reglamentaria de Medidas de Mejora (RD 390/2021) en XML Oficial 3.0**:
+   * Estructuración automática de los 3 paquetes oficiales de rehabilitación reglamentarios (SATE, Aerotermia y Solución Integral con Solar Fotovoltaica) en el nodo `<MedidasMejora>` del XML oficial v3.0.
+   * Homologación estricta con el esquema ministerial RelaxNG (`DatosEnergeticosDelEdificioSchema30-full.rng`), aplicando los enumerados normativos válidos para coste (`COSTE_MEDIDA`: `Medio`, `MuyAlto`) y plazo de recuperación (`PLAZO_RECUPERACION`: `Medio`, `Largo`).
+   * Generación automática del dictamen técnico comparativo de ahorro y deducciones de IRPF y subvenciones Next Generation EU (RD 853/2021) en PDF maquetado profesionalmente con PyMuPDF.
+
+3. **Desacoplamiento y Resiliencia en GitHub Actions (CI / Test Suite)**:
+   * Empaquetado oficial del recurso `Escala/Localidades.xml` dentro del paquete (`src/ce3x_mcp/resources/Localidades.xml`), permitiendo que el servidor MCP ejecute cálculos de escalas y calificaciones oficiales en cualquier entorno (CI, contenedores Docker o servidores Linux) sin requerir tener instalado localmente el software de escritorio CE3X v3.2.
+   * Detección contextual del entorno en la batería de pruebas: valida ejecutables locales (`xml2cert.exe`, `CE3Xv3.2.exe`) cuando están presentes y ejecuta las pruebas analíticas, catastrales y matemáticas de forma desacoplada en los runners en la nube de GitHub Actions (`windows-latest` en Azure).
+   * Corrección de rutas estáticas en `sys.path` a resolución dinámica relativa al repositorio.
+
+4. **Blindaje de Seguridad y DevSecOps en Repositorio GitHub**:
+   * Desindexación de Git y exclusión en `.gitignore` de scripts de mantenimiento de PyPI (`subir_a_pypi.bat`), manteniéndolos en local para el autor sin exponerlos públicamente.
+   * Configuración de GitHub Advanced Security: activación de *Private Vulnerability Reporting* y *Push Protection* para prevenir la filtración accidental de credenciales o secretos en commits.
+
+5. **Plantilla Canónica de Toma de Datos In Situ en Madrid (Datos 100% Ficticios)**:
+   * Publicación de la plantilla de campo completa y cubierta `ejemplos/PLANTILLA_TOMA_DATOS_EJEMPLO_MADRID.txt` y en `ejemplos/visita_vivienda_ejemplo/INFORMACION/apuntes_visita.txt`.
+   * Incluye datos exhaustivos pero enteramente ficticios para la Comunidad de Madrid (Zona D3, 1974, 94.20 m²): técnico ficticio colegiado, termo eléctrico de 100L, caldera de condensación de 25 kW, split inverter Daikin de 3.5 kW, desglose de huecos con RPT y PVC bajo emisivo, sombra de edificio enfrente y protocolo formal del Anexo IV del RD 390/2021.
+
+---
+
 ### Versión 1.5.0 — 16/10/2026: 🛡️ Reingeniería Integral de Rigor Normativo, Conexión Real con CE3X y Purga de Plantillas (26 Herramientas)
 
 Actualización mayor centrada en la veracidad técnica, eliminación radical de datos de ejemplo y conexión directa con el motor oficial de CE3X v3.2 instalado en el sistema:
