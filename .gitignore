@@ -33,3 +33,4 @@ temp/
 
 # Scripts privados de mantenimiento y publicacion en PyPI
 subir_a_pypi.bat
+scripts/publicar_pypi.py
