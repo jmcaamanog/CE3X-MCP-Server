@@ -1,21 +1,129 @@
-VISITA TÉCNICA Y TOMA DE DATOS - CERTIFICACIÓN ENERGÉTICA
-Fecha de visita: 16/10/2026
-Inmueble: Piso 3ºD en Rúa Real 15, A Coruña (CP: 15001)
-Referencia Catastral: 2344201XK3724S0001LD
-Año de construcción: 1982 (Normativa NBE-CT-79)
-Superficie útil medida in situ: 88.50 m2 | Altura libre: 2.60 m
+================================================================================
+PLANTILLA DE TOMA DE DATOS IN SITU - CERTIFICACIÓN ENERGÉTICA DE VIVIENDA (CE3X)
+EJEMPLO PRÁCTICO CUBIERTO (DATOS 100% FICTICIOS - COMUNIDAD DE MADRID)
+================================================================================
 
-Envolvente térmica observada:
-- Fachada principal orientada al Sur, fábrica de doble hoja de ladrillo con cámara de aire.
-- Huecos: Ventanas de aluminio con rotura de puente térmico (RPT 12mm) y doble vidrio bajo emisivo 4/12/4.
-- Voladizo de alero superior en cubierta de 0.60 m de vuelo sobre las ventanas del último piso.
+1. DATOS DEL TÉCNICO CERTIFICADOR (FICTICIO)
+--------------------------------------------------------------------------------
+- Técnico competente: Arq. Técnico Carlos M. Berrocal Sánchez
+- Titulación oficial: Arquitecto Técnico (Colegiado COAATM nº 14892)
+- NIF técnico: 00000000T
+- Estudio / Razón social: Consultoría Técnica Energética Madrid Centro S.L.P.
+- Contacto: contacto@estudiotecnicomadrid.ejemplo.es | Tel: 910 00 00 00
+- Dirección profesional: Calle Princesa 22, 1º B, 28008 Madrid
 
-Instalaciones térmicas:
-- Calefacción: Caldera mural individual de condensación Saunier Duval Thema Condens 25kW a gas natural.
-- Agua Caliente Sanitaria (ACS): Termo eléctrico mural de 80 litros (1.5 kW).
+2. DATOS ADMINISTRATIVOS Y LOCALIZACIÓN DEL INMUEBLE
+--------------------------------------------------------------------------------
+- Denominación: Vivienda 4º B en Edificio Plurifamiliar
+- Dirección: Calle Santa Engracia 45, Piso 4º B
+- Municipio: Madrid
+- Provincia: Madrid
+- Código Postal: 28010
+- Referencia Catastral: 9872023VK4797B0014LK (ficticia para pruebas)
+- Año de construcción (Catastro): 1974
+- Normativa de edificación aplicable: Anterior a 1979 (Pre-NBE-CT-79)
+- Tipo de edificio: Vivienda individual dentro de bloque plurifamiliar
 
-Pruebas e inspecciones realizadas:
-- Inspección visual exhaustiva de cerramientos y carpinterías.
-- Medición dimensional in situ con distanciómetro láser.
-- Comprobación de placa de características de la caldera y termo.
-- Cotejo documental con la Sede Electrónica del Catastro.
+3. PARÁMETROS GENERALES DE LA VIVIENDA
+--------------------------------------------------------------------------------
+- Zona climática asignada (CTE DB-HE): D3 (Madrid Peninsular, Altitud 667 m)
+- Superficie útil habitable (medición in situ): 94.20 m2
+- Altura libre media de planta: 2.65 m (volumen neto habitable: 249.63 m3)
+- Masa de particiones interiores: Media (fábrica de ladrillo hueco doble enlucido)
+- Renovaciones de aire por hora (ventilación): 0.63 ren/h (según DB-HE / DB-HS 3)
+- Porcentaje de superficie útil habitable acondicionada: 100%
+
+4. ENVOLVENTE TÉRMICA, CERRAMIENTOS Y HUECOS
+--------------------------------------------------------------------------------
+4.1. FACHADA PRINCIPAL (Orientación SUR - Frente a C/ Santa Engracia):
+- Longitud: 10.50 m | Altura libre: 2.65 m | Superficie bruta: 27.82 m2
+- Superficie neta opaca: 23.20 m2
+- Solución constructiva: Fábrica de ladrillo cara vista de medio pie, cámara de
+  aire no ventilada sin aislamiento térmico original y tabique interior de rasillón.
+  Transmitancia estimada por defecto (pre-1979): U = 1.80 W/m2·K.
+- Huecos / Ventanas en Fachada Sur:
+  * HUECO 1 (Salón):
+    - Dimensiones: 2.10 m (ancho) x 1.40 m (alto) = 2.94 m2
+    - Carpintería: Aluminio lacado blanco con Rotura de Puente Térmico (RPT 12 mm).
+      U_marco = 3.20 W/m2·K.
+    - Acristalamiento: Doble vidrio Climalit 4/12/4 con cámara de aire. Ug = 2.80 W/m2·K, g = 0.75.
+    - Protecciones solares: Retranqueo en fachada d = 0.15 m. Persiana exterior
+      enrollable de lamas de PVC con capialzado aislado interiormente.
+  * HUECO 2 (Dormitorio Principal):
+    - Dimensiones: 1.20 m (ancho) x 1.40 m (alto) = 1.68 m2
+    - Carpintería: PVC 3 cámaras abatible. U_marco = 2.20 W/m2·K.
+    - Acristalamiento: Doble vidrio bajo emisivo 4/16/4 con gas argón. Ug = 1.40 W/m2·K.
+    - Protecciones solares: Retranqueo d = 0.15 m. Persiana enrollable de PVC.
+
+4.2. FACHADA POSTERIOR (Orientación NORTE - Patio de manzana abierto y luminoso):
+- Superficie neta opaca: 19.40 m2
+- Solución constructiva: Enfoscado exterior de cemento, cámara de aire y tabique interior.
+  Transmitancia U = 1.80 W/m2·K.
+- Huecos / Ventanas en Fachada Norte:
+  * HUECO 3 (Cocina):
+    - Dimensiones: 1.00 m (ancho) x 1.20 m (alto) = 1.20 m2
+    - Carpintería: Aluminio anodizado sin RPT (U_marco = 5.70 W/m2·K).
+    - Acristalamiento: Vidrio simple 4 mm (Ug = 5.70 W/m2·K).
+  * HUECO 4 (Dormitorio 2):
+    - Dimensiones: 1.20 m (ancho) x 1.40 m (alto) = 1.68 m2
+    - Carpintería: Aluminio con RPT 12 mm y doble vidrio 4/8/4.
+
+4.3. PARTICIONES INTERIORES Y COLINDANTES:
+- Suelo: En contacto con vivienda inferior en planta 3ª (calefactada) -> Adiabático.
+- Techo: En contacto con vivienda superior en planta 5ª (calefactada) -> Adiabático.
+- Medianeras laterales: En contacto con viviendas vecinas colindantes -> Adiabáticas.
+- Cerramiento en contacto con zonas comunes (rellano y escalera comunitaria):
+  Superficie: 14.50 m2 | U estimada: 1.40 W/m2·K.
+- Puerta de acceso a vivienda: Madera maciza de 2.05 x 0.85 m (1.74 m2, U = 2.50 W/m2·K).
+
+4.4. PATRONES DE SOMBRA Y OBSTÁCULOS REMOTOS:
+- Fachada Sur: Edificio de enfrente ubicado a una distancia D = 16.0 metros,
+  con una altura de cornisa H = 21.0 metros sobre la rasante.
+  Ángulo de elevación solar medio: alfa = 52.6 grados.
+
+5. INSTALACIONES TÉRMICAS DE CLIMATIZACIÓN Y ACS
+--------------------------------------------------------------------------------
+5.1. AGUA CALIENTE SANITARIA (ACS):
+- Generador: Termo eléctrico mural de acumulación.
+- Marca y modelo: Ariston Pro Eco Evo 100 V.
+- Capacidad de almacenamiento: 100 Litros.
+- Potencia nominal de la resistencia: 1.50 kW (1500 W).
+- Vector energético: Electricidad peninsular (Efecto Joule).
+- Rendimiento estacional medio: 100%.
+- Ubicación: Lavadero / tendedero interior cubierto.
+
+5.2. SISTEMA DE CALEFACCIÓN:
+- Generador: Caldera mural individual de condensación a Gas Natural.
+- Marca y modelo: Saunier Duval Thelia Condens 25 kW.
+- Potencia térmica nominal: 25.0 kW en calefacción y ACS.
+- Vector energético: Gas Natural canalizado.
+- Rendimiento estacional estimado (según antigüedad y combustión): 98.0% sobre PCI.
+- Sistema de emisión: Radiadores de elementos de aluminio con llaves termostáticas.
+- Regulación: Termostato digital cronotermostato ambiente semanal programable en salón.
+
+5.3. SISTEMA DE REFRIGERACIÓN:
+- Generador: Bomba de calor aire-aire / Split mural 1x1 con tecnología inverter.
+- Marca y modelo: Daikin Sensira TXF35E.
+- Potencia frigorífica nominal: 3.50 kW frío (potencia calorífica: 4.00 kW).
+- Vector energético: Electricidad.
+- Rendimiento estacional de refrigeración: SEER = 6.21 (Clasificación A++).
+- Cobertura espacial: Salón / estar principal (26.50 m2 acondicionados, ~28% del inmueble).
+
+6. PRUEBAS IN SITU, PROTOCOLO DE INSPECCIÓN Y REGISTRO DOCUMENTAL
+--------------------------------------------------------------------------------
+- Fecha exacta de la visita presencial obligatoria: 16/10/2026.
+- Pruebas y metodologías aplicadas conforme al Anexo IV del RD 390/2021:
+  1. Inspección visual minuciosa del estado de conservación de envolvente, fachadas y carpinterías.
+  2. Medición geométrica y dimensional in situ con distanciómetro láser calibrado Leica Disto D2.
+  3. Comprobación física in situ de las placas de características de la caldera, termo y split.
+  4. Medición del espesor de perfiles y acristalamientos con galga óptica para vidrio de cámara.
+  5. Determinación de ángulos de obstáculos remotos y sombras con inclinómetro digital.
+  6. Cotejo telemático con la información catastral de la Sede Electrónica del Catastro.
+
+7. OBSERVACIONES Y RECOMENDACIONES TÉCNICAS INICIALES PARA EL INFORME
+--------------------------------------------------------------------------------
+- Se recomienda sustituir el acristalamiento simple de la cocina (Hueco 3) por doble vidrio bajo emisivo.
+- Existe gran potencial de ahorro mediante la incorporación de aislamiento térmico por el interior o SATE.
+- Oportunidad de acogerse a los programas de ayudas Next Generation EU (RD 853/2021) al superar previsiblemente
+  el 30% de reducción de consumo de energía primaria no renovable sustituyendo el termo eléctrico por aerotermia.
+================================================================================

@@ -30,3 +30,6 @@ temp/
 .vscode/
 .idea/
 *.swp
+
+# Scripts privados de mantenimiento y publicacion en PyPI
+subir_a_pypi.bat
