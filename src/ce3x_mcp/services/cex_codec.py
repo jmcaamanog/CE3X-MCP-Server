@@ -327,6 +327,29 @@ def guardar_fichero_cex_completo(
         if len(lines) > 102:
             lines[97] = b"aV" + to_lat(str(ano_construccion))
             lines[101] = b"aV" + to_lat(sup_str)
+
+        # Sincronización estricta de superficies en Objeto 4 (Instalaciones) y Objeto 5 (Medidas de Mejora)
+        # En la plantilla base de bloque, las dos calderas en cascada cubren el 92% y el 8% de ACS y Calefacción.
+        # Sus superficies originales (138.0 m² y 12.0 m², suma 150 m²) deben sincronizarse exactamente
+        # con superficie_util para evitar que CE3X bloquee la calificación con el aviso modal:
+        # "La instalación de calefacción cubre una demanda superior al 100%"
+        if superficie_util:
+            sup1 = round(superficie_util * 0.92, 2)
+            sup2 = round(superficie_util - sup1, 2)
+            sup1_str = f"{sup1:.2f}".rstrip("0").rstrip(".")
+            sup2_str = f"{sup2:.2f}".rstrip("0").rstrip(".")
+            sup1_bytes = b"V" + to_lat(sup1_str)
+            sup2_bytes = b"V" + to_lat(sup2_str)
+
+            target_indices_sup1 = [1237, 1242, 3984, 3989, 43788, 43793, 71012, 71017]
+            target_indices_sup2 = [1305, 1310, 4031, 4036, 43856, 43861, 71059, 71064]
+
+            for idx in target_indices_sup1:
+                if idx < len(lines) and (lines[idx] == b"V138.0" or (lines[idx].startswith(b"V") and len(lines[idx]) < 15)):
+                    lines[idx] = sup1_bytes
+            for idx in target_indices_sup2:
+                if idx < len(lines) and (lines[idx] == b"V12.0" or (lines[idx].startswith(b"V") and len(lines[idx]) < 15)):
+                    lines[idx] = sup2_bytes
     resultado_bytes = b"\r\n".join(lines)
     os.makedirs(os.path.dirname(os.path.abspath(ruta_salida)), exist_ok=True)
     with open(ruta_salida, "wb") as f:
