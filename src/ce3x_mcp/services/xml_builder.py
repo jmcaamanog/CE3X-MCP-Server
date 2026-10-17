@@ -337,6 +337,98 @@ def generar_xml_oficial_30(
     ind_dem_acs = root.find(".//Indicadores/Demanda/Acs")
     if ind_dem_acs is not None: ind_dem_acs.text = f"{resultado.demanda_acs:.2f}"
 
+    # 7. MEDIDAS DE MEJORA: Construcción reglamentaria de los paquetes en <MedidasMejora>
+    mm_root = root.find(".//MedidasMejora")
+    if mm_root is not None:
+        mm_root.clear()
+        
+        paquetes = proyecto.medidas_mejora
+        if not paquetes:
+            from ce3x_mcp.services.improvement_engine import calcular_paquetes_medidas_mejora
+            paquetes = calcular_paquetes_medidas_mejora(proyecto, resultado)
+            
+        def _map_coste_rng(coste: float) -> str:
+            if coste < 500: return "<500"
+            if coste < 1000: return "500-1000"
+            if coste < 10000: return "1000-10000"
+            if coste < 25000: return "10000-25000"
+            if coste < 50000: return "25000-50000"
+            if coste < 100000: return "50000-100000"
+            return ">100000"
+
+        def _map_plazo_rng(plazo: float) -> str:
+            if plazo < 5: return "<5"
+            if plazo < 10: return "5-10"
+            if plazo < 15: return "10-15"
+            return ">15"
+
+        for m in paquetes:
+            elem = ET.SubElement(mm_root, "MedidaMejora")
+            ET.SubElement(elem, "Nombre").text = m.nombre
+            ET.SubElement(elem, "Descripcion").text = f"data:text/html,<b>{m.nombre}</b><br>{m.descripcion}"
+            ET.SubElement(elem, "CosteEstimado").text = _map_coste_rng(m.inversion_estimada_eur)
+            ET.SubElement(elem, "PlazoRecuperacion").text = _map_plazo_rng(m.periodo_retorno_anos)
+            ET.SubElement(elem, "OtrosDatos").text = f"data:text/html,Inversión estimada: {m.inversion_estimada_eur:,.2f} € | Ahorro anual estimado: {m.ahorro_factura_anual_eur:,.2f} €/año"
+            ET.SubElement(elem, "MejoraCondiciones").text = "ConfortTermicoBienestar Salubridad"
+            
+            ind = ET.SubElement(elem, "Indicadores")
+            dem = ET.SubElement(ind, "Demanda")
+            red_dem = 0.50 if m.tipo in ["Envolvente", "Conjunto"] else 0.95
+            ET.SubElement(dem, "Cal").text = f"{resultado.demanda_calefaccion * red_dem:.2f}"
+            ET.SubElement(dem, "Ref").text = f"{resultado.demanda_refrigeracion:.2f}"
+            ET.SubElement(dem, "Acs").text = f"{resultado.demanda_acs:.2f}"
+            
+            ef = ET.SubElement(ind, "EnergiaFinal")
+            ahorro_ratio = max(0.1, 1.0 - m.ahorro_energia_primaria_pct / 100.0)
+            ET.SubElement(ef, "Cal").text = f"{resultado.demanda_calefaccion * ahorro_ratio:.2f}"
+            ET.SubElement(ef, "Ref").text = f"{resultado.demanda_refrigeracion:.2f}"
+            ET.SubElement(ef, "Acs").text = f"{resultado.demanda_acs * ahorro_ratio:.2f}"
+            ET.SubElement(ef, "Ilu").text = "0.00"
+            ET.SubElement(ef, "Ven").text = "0.00"
+            ET.SubElement(ef, "Tot").text = f"{(resultado.demanda_calefaccion + resultado.demanda_acs) * ahorro_ratio:.2f}"
+            
+            ep = ET.SubElement(ind, "EnergiaPrimariaNoRenovable")
+            ep_val = resultado.consumo_energia_primaria_nr * ahorro_ratio
+            ET.SubElement(ep, "Cal").text = f"{ep_val * 0.7:.2f}"
+            ET.SubElement(ep, "Ref").text = "0.00"
+            ET.SubElement(ep, "Acs").text = f"{ep_val * 0.3:.2f}"
+            ET.SubElement(ep, "Ilu").text = "0.00"
+            ET.SubElement(ep, "Ven").text = "0.00"
+            ET.SubElement(ep, "Tot").text = f"{ep_val:.2f}"
+            
+            em = ET.SubElement(ind, "Emisiones")
+            em_val = resultado.emisiones_co2 * ahorro_ratio
+            ET.SubElement(em, "Cal").text = f"{em_val * 0.7:.2f}"
+            ET.SubElement(em, "Ref").text = "0.00"
+            ET.SubElement(em, "Acs").text = f"{em_val * 0.3:.2f}"
+            ET.SubElement(em, "Ilu").text = "0.00"
+            ET.SubElement(em, "Tot").text = f"{em_val:.2f}"
+            
+            cal = ET.SubElement(elem, "Calificacion")
+            c_dem = ET.SubElement(cal, "Demanda")
+            ET.SubElement(c_dem, "Cal").text = m.nueva_letra_energia_primaria
+            ET.SubElement(c_dem, "Ref").text = "A"
+            
+            c_ep = ET.SubElement(cal, "EnergiaPrimariaNoRenovable")
+            ET.SubElement(c_ep, "Cal").text = m.nueva_letra_energia_primaria
+            ET.SubElement(c_ep, "Ref").text = "A"
+            ET.SubElement(c_ep, "Acs").text = "A"
+            ET.SubElement(c_ep, "Ilu").text = "A"
+            ET.SubElement(c_ep, "Tot").text = m.nueva_letra_energia_primaria
+            
+            c_em = ET.SubElement(cal, "Emisiones")
+            ET.SubElement(c_em, "Cal").text = m.nueva_letra_emisiones
+            ET.SubElement(c_em, "Ref").text = "A"
+            ET.SubElement(c_em, "Acs").text = "A"
+            ET.SubElement(c_em, "Ilu").text = "A"
+            ET.SubElement(c_em, "Tot").text = m.nueva_letra_emisiones
+
+        if paquetes:
+            sec = ET.SubElement(mm_root, "SecuenciaTemporal")
+            for p in paquetes:
+                ET.SubElement(sec, "Medida").text = p.nombre
+            ET.SubElement(sec, "Justificacion").text = "data:text/html,Se recomienda abordar en primera fase la reducción pasiva de demanda en envolvente térmica, seguida de la renovación de equipos a aerotermia y la incorporación final de generación renovable solar fotovoltaica."
+
     xml_str = ET.tostring(root, encoding="utf-8").decode("utf-8")
 
     # Validación final contra RelaxNG con lxml

@@ -808,6 +808,11 @@ def certificar_inmueble_desde_carpeta(
         generales=gen
     )
 
+    # 3. Paquetes Oficiales de Medidas de Mejora (RD 390/2021)
+    mejoras = calcular_paquetes_medidas_mejora(proyecto, res_cal)
+    proyecto.medidas_mejora = mejoras
+
+    # 3.1. Generar Archivo XML Oficial 3.0 con Medidas de Mejora
     xml_path = os.path.join(out_dir, "Certificado_Oficial_Registro.xml")
     xml_content = generar_xml_oficial_30(proyecto, res_cal)
     with open(xml_path, "w", encoding="utf-8") as fp:
@@ -844,13 +849,13 @@ def certificar_inmueble_desde_carpeta(
             except Exception:
                 pass
 
-    # 5. Generar Paquetes de Mejora y Dictamen NextGen (PDF y Markdown)
-    mejoras = calcular_paquetes_medidas_mejora(proyecto, res_cal)
+    # 5. Generar Documento Técnico de Medidas de Mejora y Dictamen NextGen (PDF y Markdown)
     medida_destacada = mejoras[2] if len(mejoras) >= 3 else mejoras[0]
     dictamen = generar_informe_justificativo_nextgen(
         proyecto=proyecto,
         calificacion_inicial=res_cal,
-        medida_seleccionada=medida_destacada
+        medida_seleccionada=medida_destacada,
+        todas_las_medidas=mejoras
     )
 
     informe_mejoras_md = os.path.join(out_dir, "Informe_Medidas_Mejora_NextGen.md")
