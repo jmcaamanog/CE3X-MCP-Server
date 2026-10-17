@@ -126,7 +126,7 @@ def extraer_huecos_de_texto(texto: str) -> List[Dict[str, Any]]:
     if not texto:
         return huecos
     pat = re.compile(
-        r'(\d+)\s*(?:ventanas?|balconeras?|puertas?|huecos?|\s+)+(?:de)?\s*(\d+[.,]\d+)\s*[xX*]\s*(\d+[.,]\d+)',
+        r'(\d+)\s*(?:ventanas?|balconeras?|puertas?|huecos?)\s*(?:de\s*)?(\d+[.,]\d+)\s*[xX*]\s*(\d+[.,]\d+)',
         re.IGNORECASE
     )
     for line in texto.splitlines():
