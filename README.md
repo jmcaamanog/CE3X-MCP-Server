@@ -10,7 +10,7 @@
 
 </div>
 
-### Servidor MCP Oficial para Automatizar Certificados de Eficiencia Energética con IA (Claude, Gemini, Cursor)
+### Servidor MCP Oficial para Automatizar Certificados de Eficiencia Energética con IA (Claude, Gemini, ChatGPT)
 *Diseñado bajo la perspectiva técnica de un Arquitecto Técnico & BIM Manager para dotar al sector AECO de una herramienta libre, rigurosa y ultrarrápida.*
 
 ---
