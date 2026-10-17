@@ -29,7 +29,7 @@ jobs:
 
     - name: Run pip-audit for dependency vulnerabilities
       run: |
-        pip-audit --desc on
+        pip-audit . --desc on
 
     - name: Run static type checking with mypy
       run: |
