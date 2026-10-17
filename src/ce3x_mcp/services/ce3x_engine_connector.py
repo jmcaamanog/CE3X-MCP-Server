@@ -123,7 +123,11 @@ def obtener_escalas_oficiales_zona(zona_climatica: str, tipologia: str = "Unifam
     root_dir = detectar_directorio_ce3x(directorio_ce3x) or DEFAULT_CE3X_DIR
     localidades_xml = os.path.join(root_dir, "Escala", "Localidades.xml")
     if not os.path.exists(localidades_xml):
-        raise FileNotFoundError(f"No se encuentra la base de datos de escalas oficiales en: {localidades_xml}")
+        pkg_resource = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "resources", "Localidades.xml")
+        if os.path.exists(pkg_resource):
+            localidades_xml = pkg_resource
+        else:
+            raise FileNotFoundError(f"No se encuentra la base de datos de escalas oficiales en: {localidades_xml}")
 
     tree = ET.parse(localidades_xml)
     root = tree.getroot()
