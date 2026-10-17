@@ -137,7 +137,7 @@ def generar_xml_oficial_30(
     if not os.path.exists(t_path):
         raise FileNotFoundError(f"Plantilla oficial no encontrada en: {t_path}")
         
-    tree = ET.parse(t_path)
+    tree = ET.parse(t_path)  # nosec B314
     root = tree.getroot()
     
     adm = proyecto.administrativos

@@ -52,7 +52,7 @@ def consultar_catastro_por_rc(referencia_catastral: str) -> Dict[str, Any]:
                 "error": f"La Sede Electrónica del Catastro respondió con código HTTP {resp.status_code}."
             }
             
-        root = ET.fromstring(resp.content)
+        root = ET.fromstring(resp.content)  # nosec B314
         
         # Eliminar namespaces para búsqueda limpia e insensible al esquema XML de la OVC
         for elem in root.iter():

@@ -8,6 +8,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write # Requerido obligatoriamente para PyPI Trusted Publishing (OIDC)
 
 jobs:
   build-and-release:
@@ -34,3 +35,8 @@ jobs:
         with:
           files: dist/*
           generate_release_notes: true
+
+      - name: Publish package distributions to PyPI via Trusted Publishing (OIDC)
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true

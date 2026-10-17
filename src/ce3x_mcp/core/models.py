@@ -54,9 +54,9 @@ class HuecoVentana(BaseModel):
 
 class InstalacionTermica(BaseModel):
     nombre: str
-    tipo_servicio: Literal["Calefaccion", "Refrigeracion", "ACS", "Mixto2", "Mixto3"] = "ACS"
-    tecnologia: Literal["CalderaEstandar", "CalderaCondensacion", "BombaCalorAerotermia", "EfectoJoule", "Biomasa"] = "EfectoJoule"
-    vector_energetico: Literal["Electricidad", "GasNatural", "Gasoleo", "BiomasaPellet"] = "Electricidad"
+    tipo_servicio: str = "ACS"
+    tecnologia: str = "EfectoJoule"
+    vector_energetico: str = "Electricidad"
     rendimiento_estacional: float = Field(1.0, description="Rendimiento estacional o SCOP/COP (ej. 1.0 para efecto Joule, 3.2 para aerotermia, 0.85 para caldera)")
     potencia_nominal_kw: float = Field(10.0, description="Potencia térmica nominal en kW")
     cobertura_pct: float = Field(100.0, description="Porcentaje de demanda que cubre este equipo")

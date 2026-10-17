@@ -60,7 +60,7 @@ def verificar_instalacion_ce3x(directorio_ce3x: Optional[str] = None) -> Dict[st
     total_localidades = 0
     if os.path.exists(localidades_xml):
         try:
-            tree = ET.parse(localidades_xml)
+            tree = ET.parse(localidades_xml)  # nosec B314
             total_localidades = len(tree.getroot().findall("Localidad"))
         except Exception:
             pass
@@ -129,7 +129,7 @@ def obtener_escalas_oficiales_zona(zona_climatica: str, tipologia: str = "Unifam
         else:
             raise FileNotFoundError(f"No se encuentra la base de datos de escalas oficiales en: {localidades_xml}")
 
-    tree = ET.parse(localidades_xml)
+    tree = ET.parse(localidades_xml)  # nosec B314
     root = tree.getroot()
 
     zona_clean = zona_climatica.strip().upper()

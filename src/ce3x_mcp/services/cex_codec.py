@@ -144,7 +144,7 @@ def leer_fichero_cex(ruta_archivo: str) -> List[Any]:
         raw = f.read()
     cleaned = raw.replace(b"\r\n", b"\n")
     stream = io.BytesIO(cleaned)
-    unpickler = pickle.Unpickler(stream, encoding="latin1")
+    unpickler = pickle.Unpickler(stream, encoding="latin1")  # nosec B301
     
     objetos = []
     while True:

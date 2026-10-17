@@ -25,6 +25,7 @@ except ImportError:
 from typing import Optional, Dict, Any, List
 import os
 import tempfile
+import shutil
 
 from ce3x_mcp.core.models import (
     ProyectoCertificacion,
