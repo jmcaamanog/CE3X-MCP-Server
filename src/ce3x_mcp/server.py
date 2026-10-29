@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+from typing import Optional, Dict, Any, List, Annotated, Union
 try:
     from fastmcp import FastMCP, Context
 except ImportError:
@@ -26,7 +27,6 @@ except ImportError:
         class Context:  # type: ignore
             async def report_progress(self, progress: float, total: Optional[float] = None, message: Optional[str] = None) -> None: pass
             async def info(self, message: str, **kwargs: Any) -> None: pass
-from typing import Optional, Dict, Any, List, Annotated, Union
 from pydantic import Field
 import os
 import tempfile
