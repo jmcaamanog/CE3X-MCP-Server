@@ -64,5 +64,13 @@ jobs:
     - name: Run Unit & Integration Tests
       env:
         PYTHONIOENCODING: utf-8
+      shell: bash
       run: |
-        python tests/test_ce3x_mcp.py
+        python tests/test_ce3x_mcp.py 2>&1 | tee test_run.log
+
+    - name: Upload Test Log Artifact
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: test-log-py${{ matrix.python-version }}
+        path: test_run.log
